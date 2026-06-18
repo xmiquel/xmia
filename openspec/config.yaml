@@ -1,0 +1,97 @@
+schema: spec-driven
+
+context: |
+  Project purpose:
+  Build an agent-friendly development environment and codebase with clear specifications,
+  small validated changes, and strong separation between Windows-native responsibilities
+  and containerized services.
+
+  Primary environment:
+  - Windows host machine is the main development runtime.
+  - VS Code is the main editor.
+  - Git is the source control system.
+  - OpenCode is the main coding agent interface.
+  - Superpowers is available for brainstorming, planning discipline, and commit assistance.
+
+  Core technology stack:
+  - Backend: Python
+  - Frontend: TypeScript, React, Vite
+  - Containers: Docker / Docker Compose for auxiliary services only
+  - Local AI options may be available, but cloud models can be used for difficult planning
+    or setup tasks when necessary.
+
+  Critical platform constraint:
+  - MetaTrader 5 (MT5) integration through Python must run on the Windows host.
+  - Anything that talks directly to MT5 must NOT run inside Docker, WSL, or Linux containers.
+  - Docker is allowed for databases, observability, queues, mocks, dashboards, and other
+    supporting services.
+
+  Architecture guidance:
+  - Prefer a clear separation between:
+    1. Windows-native MT5 integration layer
+    2. Python application/service layer
+    3. Frontend UI layer
+    4. Containerized support services
+  - Prefer explicit interfaces between components.
+  - Prefer small modules and low-coupling boundaries.
+  - Prefer incremental delivery over large one-shot implementations.
+
+  Python environment and dependency management:
+  - Use uv as the standard Python package and environment manager.
+  - Create the project virtual environment with `uv venv`.
+  - Store the virtual environment in `.venv/`.
+  - Manage dependencies with `uv add`, `uv remove`, and `uv sync`.
+  - Use `pyproject.toml` as the source of truth for Python dependencies.
+  - Do not introduce Poetry, Pipenv, Conda, or ad-hoc pip workflows unless explicitly required.
+  
+  Development approach:
+  - Follow Spec-Driven Development (SDD) with OpenSpec.
+  - Use TDD where practical, especially for domain logic, adapters, and regressions.
+  - Keep proposals, specs, designs, and tasks concise, testable, and versioned.
+  - Avoid oversized prompts and unnecessary background context.
+  - Spend tokens on the current change, not on re-explaining the whole project.
+
+  Testing expectations:
+  - Python tests: pytest
+  - Frontend unit/component tests: Vitest
+  - End-to-end or browser workflows when needed: Playwright
+  - Prefer mocks/fakes around MT5 for automated tests.
+  - Do not require a live MT5 terminal for most automated test runs.
+
+  Project quality expectations:
+  - Prefer deterministic setup and reproducible local workflows.
+  - Prefer explicit configuration over hidden magic.
+  - Prefer readable code over clever code.
+  - Prefer documented trade-offs when making architecture decisions.
+  - Keep Windows compatibility in mind for paths, shells, services, and process handling.
+
+rules:
+  proposal:
+    - State the problem, goal, scope, and out-of-scope items clearly.
+    - Mention Windows impact explicitly whenever MT5, paths, shells, services, or permissions are involved.
+    - Mention Docker impact explicitly whenever infrastructure or auxiliary services are involved.
+    - Split large efforts into smaller independently reviewable changes.
+    - Prefer one meaningful change per proposal.
+
+  specs:
+    - Write requirements as observable behavior and verifiable outcomes.
+    - Use clear acceptance criteria.
+    - Use Given/When/Then scenarios when behavior benefits from examples.
+    - Separate user-visible behavior from implementation details.
+    - Include platform constraints when behavior differs on Windows versus containers.
+    - Do not hide MT5 constraints; state them explicitly in the requirement or notes.
+
+  design:
+    - Document architectural decisions and trade-offs.
+    - Explain what runs on Windows host and what runs in Docker.
+    - Prefer simple designs before introducing abstraction layers.
+    - Record risks, assumptions, and operational constraints.
+    - Call out testing strategy, especially for MT5-dependent features.
+    - Prefer interfaces/adapters around external systems such as MT5.
+
+  tasks:
+    - Keep tasks small, sequential, and testable.
+    - Each implementation task should have a clear validation step.
+    - Prefer test-first or test-alongside development for backend/domain work.
+    - Include setup or verification tasks when a change affects local environment or tooling.
+    - Avoid tasks that combine infrastructure, backend, and frontend changes unless strictly necessary.
