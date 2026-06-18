@@ -1,8 +1,9 @@
 ## 1. Project Setup
 
 - [ ] 1.1 Create src/mt5/ package with __init__.py
-- [ ] 1.2 Add pyproject.toml with project metadata and dependencies (MetaTrader5 pinned, pydantic, pytest)
-- [ ] 1.3 Create conftest.py with pytest fixtures for FakeMT5Adapter and LiveMT5Adapter
+- [ ] 1.2 Add pyproject.toml with project metadata and all tooling configs (ruff, bandit, mypy, pytest, coverage)
+- [ ] 1.3 Create .pre-commit-config.yaml with hooks for ruff, mypy, and bandit
+- [ ] 1.4 Create conftest.py with pytest fixtures for FakeMT5Adapter and LiveMT5Adapter
 
 ## 2. Error Handling
 
@@ -56,4 +57,17 @@
 - [ ] 8.2 Add pytest markers (@pytest.mark.live) for tests requiring MT5 terminal
 - [ ] 8.3 Add pytest.skipif conditions for live tests when MT5 is unavailable
 - [ ] 8.4 Verify all unit tests pass without MT5 terminal
-- [ ] 8.5 Run full test suite and confirm zero failures in unit-test mode
+- [ ] 8.5 Run quality checks: ruff check, bandit, mypy, pytest (with coverage), and pre-commit
+
+## Tooling Commands Reference
+
+```bash
+# Run all quality checks
+ruff check src/ tests/
+bandit -r src/
+mypy src/
+pytest --cov=src --cov-report=term-missing
+
+# Install pre-commit hooks (one-time setup)
+pre-commit install
+```
