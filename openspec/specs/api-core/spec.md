@@ -125,7 +125,7 @@ The system SHALL expose a `GET /api/v1/symbols/{symbol}` endpoint that returns m
 
 ## Requirement: Market Rates Endpoint
 
-The system SHALL expose a `GET /api/v1/rates/{symbol}` endpoint that returns historical rate data (OHLCV candles) for a given symbol.
+The system SHALL expose a `GET /api/v1/rates/{symbol}` endpoint that returns historical rate data (OHLCV candles) for a given symbol. Each candle SHALL include time, open, high, low, close, tick_volume, spread, and real_volume fields.
 
 **Query parameters:**
 
@@ -139,12 +139,14 @@ The system SHALL expose a `GET /api/v1/rates/{symbol}` endpoint that returns his
 ```json
 [
   {
-    "time": "2026-06-18T10:00:00",
+    "time": 1780272000,
     "open": 1.1000,
     "high": 1.1005,
     "low": 1.0995,
     "close": 1.1002,
-    "volume": 150
+    "tick_volume": 150,
+    "spread": 10,
+    "real_volume": 150000
   }
 ]
 ```
@@ -154,7 +156,7 @@ The system SHALL expose a `GET /api/v1/rates/{symbol}` endpoint that returns his
 - **WHEN** a GET request is made to `/api/v1/rates/EURUSD`
 - **THEN** the response SHALL return HTTP 200
 - **AND** the body SHALL be an array of candles
-- **AND** each candle SHALL have time, open, high, low, close, and volume fields
+- **AND** each candle SHALL have time, open, high, low, close, tick_volume, spread, and real_volume fields
 - **AND** the array SHALL contain 10 candles by default
 
 ### Scenario: Get rates with custom timeframe and count
