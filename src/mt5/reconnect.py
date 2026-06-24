@@ -1,4 +1,4 @@
-import time
+﻿import time
 
 from mt5.config import MT5Config
 from mt5.errors import ConnectionError
@@ -15,6 +15,7 @@ def reconnect(adapter: MT5Adapter, config: MT5Config) -> None:
                 login=config.account_number,
                 password=config.password,
                 server=config.server,
+                portable=config.portable,
             )
             return
         except Exception as e:

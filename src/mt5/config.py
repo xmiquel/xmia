@@ -11,6 +11,7 @@ class MT5Config(BaseModel):
     timeout: int = 30
     reconnect_attempts: int = 3
     reconnect_delay: int = 5
+    portable: bool = False
 
     @classmethod
     def from_env(cls) -> "MT5Config":
@@ -22,6 +23,7 @@ class MT5Config(BaseModel):
             timeout=int(os.getenv("MT5_TIMEOUT", "30")),
             reconnect_attempts=int(os.getenv("MT5_RECONNECT_ATTEMPTS", "3")),
             reconnect_delay=int(os.getenv("MT5_RECONNECT_DELAY", "5")),
+            portable=os.getenv("MT5_PORTABLE", "False").lower() in ("true", "1", "yes"),
         )
 
     @field_validator("account_number")

@@ -23,6 +23,7 @@ def create_app(adapter: MT5Adapter | None = None) -> FastAPI:
             login=config.account_number,
             password=config.password,
             server=config.server,
+            portable=config.portable,
         )
 
     @asynccontextmanager

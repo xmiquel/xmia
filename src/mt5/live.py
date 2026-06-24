@@ -1,4 +1,4 @@
-from datetime import datetime
+﻿from datetime import datetime
 from typing import TYPE_CHECKING, Any
 
 from mt5.errors import (
@@ -53,9 +53,9 @@ class LiveMT5Adapter:
     def initialize(
         self, path: str | None = None, login: int | None = None,
         password: str | None = None, server: str | None = None,
+        portable: bool = False,
     ) -> None:
         mt5 = self._import_mt5()
-        from typing import Any
         kwargs: dict[str, Any] = {}
         if path is not None:
             kwargs["path"] = path
@@ -65,6 +65,8 @@ class LiveMT5Adapter:
             kwargs["password"] = password
         if server is not None:
             kwargs["server"] = server
+        if portable:
+            kwargs["portable"] = True
         try:
             result = mt5.initialize(**kwargs)
         except Exception as e:
@@ -97,7 +99,7 @@ class LiveMT5Adapter:
         try:
             mt5 = self._import_mt5()
             mt5.shutdown()
-        except Exception:  # noqa: S110  # nosec
+        except Exception:
             pass
         finally:
             self._connected = False

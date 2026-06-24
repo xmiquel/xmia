@@ -22,7 +22,7 @@ dev = [
   "pre-commit>=3",
 ]
 mt5 = [
-  "MetaTrader5",
+  "metatrader5",
 ]
 
 [tool.hatch.build.targets.wheel]

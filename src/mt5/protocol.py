@@ -1,4 +1,4 @@
-from dataclasses import dataclass
+﻿from dataclasses import dataclass
 from datetime import datetime
 from typing import Protocol, runtime_checkable
 
@@ -66,6 +66,7 @@ class MT5Adapter(Protocol):
     def initialize(
         self, path: str | None = None, login: int | None = None,
         password: str | None = None, server: str | None = None,
+        portable: bool = False,
     ) -> None:
         ...
 

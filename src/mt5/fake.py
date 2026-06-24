@@ -1,4 +1,4 @@
-from dataclasses import dataclass
+﻿from dataclasses import dataclass
 from datetime import datetime, timedelta
 from enum import Enum, auto
 
@@ -89,6 +89,7 @@ class FakeMT5Adapter:
     def initialize(
         self, path: str | None = None, login: int | None = None,
         password: str | None = None, server: str | None = None,
+        portable: bool = False,
     ) -> None:
         self._check_error("initialize")
         if not self._simulate_terminal_available:
