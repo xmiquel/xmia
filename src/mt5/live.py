@@ -154,7 +154,7 @@ class LiveMT5Adapter:
 
         return [
             {
-                "time": datetime.fromtimestamp(int(r[0])),
+                "time": int(r[0]),
                 "open": float(r[1]),
                 "high": float(r[2]),
                 "low": float(r[3]),

@@ -152,7 +152,7 @@ class FakeMT5Adapter:
             t = now - timedelta(hours=timeframe * i)
             base = 1.1000 + i * 0.0001
             rates.append({
-                "time": t,
+                "time": int(t.timestamp()),
                 "open": base,
                 "high": base + 0.0005,
                 "low": base - 0.0005,
