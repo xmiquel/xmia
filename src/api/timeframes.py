@@ -7,11 +7,11 @@ TIMEFRAMES: dict[str, int] = {
     "PERIOD_M15": 15,
     "PERIOD_M24": 24,
     "PERIOD_M30": 30,
-    "PERIOD_H1": 60,
-    "PERIOD_H4": 240,
-    "PERIOD_D1": 1440,
-    "PERIOD_W1": 10080,
-    "PERIOD_MN1": 43200,
+    "PERIOD_H1": 16385,
+    "PERIOD_H4": 16388,
+    "PERIOD_D1": 16408,
+    "PERIOD_W1": 32769,
+    "PERIOD_MN1": 49153,
 }
 
 VALID_TIMEFRAMES = list(TIMEFRAMES.keys())

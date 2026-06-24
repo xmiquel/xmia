@@ -1,5 +1,4 @@
-﻿import time
-from datetime import datetime
+﻿from datetime import datetime
 from typing import TYPE_CHECKING, Any
 
 from mt5.errors import (
@@ -149,12 +148,7 @@ class LiveMT5Adapter:
             raise AdapterNotConnectedError("Not connected")
 
         mt5.symbol_select(symbol, True)
-        rates = None
-        for _ in range(5):
-            rates = mt5.copy_rates_from_pos(symbol, timeframe, 0, count)
-            if rates is not None:
-                break
-            time.sleep(0.5)
+        rates = mt5.copy_rates_from_pos(symbol, timeframe, 0, count)
         if rates is None:
             return []
 
