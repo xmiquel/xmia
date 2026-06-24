@@ -1,20 +1,25 @@
 ﻿import { useEffect, useRef } from "react";
 import { createChart, ColorType } from "lightweight-charts";
+import type { IChartApi, ISeriesApi, UTCTimestamp } from "lightweight-charts";
 import type { Candle } from "../types";
 import "./PriceChart.css";
 
 interface Props {
   data: Candle[];
   symbol: string;
+  digits: number;
   loading: boolean;
   error: string | null;
 }
 
-export default function PriceChart({ data, symbol, loading, error }: Props) {
+export default function PriceChart({ data, symbol, digits, loading, error }: Props) {
   const chartContainerRef = useRef<HTMLDivElement>(null);
+  const chartRef = useRef<IChartApi | null>(null);
+  const seriesRef = useRef<ISeriesApi<"Candlestick"> | null>(null);
+  const symbolRef = useRef(symbol);
 
   useEffect(() => {
-    if (!chartContainerRef.current || data.length === 0) return;
+    if (!chartContainerRef.current) return;
 
     const chart = createChart(chartContainerRef.current, {
       width: chartContainerRef.current.clientWidth,
@@ -32,33 +37,26 @@ export default function PriceChart({ data, symbol, loading, error }: Props) {
       },
       timeScale: {
         borderColor: "#e0e0e0",
+        timeVisible: true,
+        secondsVisible: false,
       },
     });
 
-    const candleSeries = chart.addCandlestickSeries({
-      upColor: "#26a69a",
-      downColor: "#ef5350",
-      borderDownColor: "#ef5350",
-      borderUpColor: "#26a69a",
-      wickDownColor: "#ef5350",
-      wickUpColor: "#26a69a",
+    const series = chart.addCandlestickSeries({
+      upColor: "transparent",
+      downColor: "#000000",
+      borderDownColor: "#000000",
+      borderUpColor: "#000000",
+      wickDownColor: "#000000",
+      wickUpColor: "#000000",
     });
 
-    candleSeries.setData(
-      data.map((c) => ({
-        time: c.time,
-        open: c.open,
-        high: c.high,
-        low: c.low,
-        close: c.close,
-      })),
-    );
-
-    chart.timeScale().fitContent();
+    chartRef.current = chart;
+    seriesRef.current = series;
 
     const handleResize = () => {
-      if (chartContainerRef.current) {
-        chart.applyOptions({ width: chartContainerRef.current.clientWidth });
+      if (chartContainerRef.current && chartRef.current) {
+        chartRef.current.applyOptions({ width: chartContainerRef.current.clientWidth });
       }
     };
     window.addEventListener("resize", handleResize);
@@ -66,16 +64,49 @@ export default function PriceChart({ data, symbol, loading, error }: Props) {
     return () => {
       window.removeEventListener("resize", handleResize);
       chart.remove();
+      chartRef.current = null;
+      seriesRef.current = null;
     };
-  }, [data]);
+  }, []);
 
-  if (loading) return <div className="price-chart"><div className="loading">Loading chart...</div></div>;
-  if (error) return <div className="price-chart"><div className="error">{error}</div></div>;
+  useEffect(() => {
+    const series = seriesRef.current;
+    if (!series || data.length === 0) return;
+
+    series.setData(
+      data.map((c) => ({
+        time: c.time as UTCTimestamp,
+        open: c.open,
+        high: c.high,
+        low: c.low,
+        close: c.close,
+      })),
+    );
+
+    const isNewSymbol = symbol !== symbolRef.current;
+    symbolRef.current = symbol;
+
+    if (isNewSymbol) {
+      chartRef.current?.timeScale().fitContent();
+    }
+  }, [data, symbol]);
+
+  useEffect(() => {
+    seriesRef.current?.applyOptions({
+      priceFormat: {
+        type: "price" as const,
+        precision: digits,
+        minMove: 1 / Math.pow(10, digits),
+      },
+    });
+  }, [digits]);
 
   return (
     <div className="price-chart">
       <h2>{symbol}</h2>
       <div className="chart-container" ref={chartContainerRef} />
+      {loading && <div className="loading">Loading chart...</div>}
+      {error && <div className="error">{error}</div>}
     </div>
   );
 }

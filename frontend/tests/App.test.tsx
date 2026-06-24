@@ -25,7 +25,7 @@ vi.mock("../src/api/rates", () => ({
 describe("App", () => {
   it("renders the dashboard layout", async () => {
     render(<App />);
-    expect(screen.getByText("EURUSD")).toBeInTheDocument();
+    expect(screen.getAllByText("EURUSD")).toHaveLength(2);
     expect(await screen.findByText("Account")).toBeInTheDocument();
   });
 });

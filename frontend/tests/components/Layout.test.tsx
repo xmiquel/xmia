@@ -16,6 +16,16 @@ vi.mock("../../src/api/account", () => ({
   }),
 }));
 
+vi.mock("../../src/api/symbols", () => ({
+  getSymbolInfo: vi.fn().mockResolvedValue({
+    symbol: "EURUSD",
+    digits: 5,
+    spread: 10,
+    margin_currency: "EUR",
+    contract_size: 100000,
+  }),
+}));
+
 vi.mock("../../src/api/rates", () => ({
   getRates: vi.fn().mockResolvedValue([
     { time: 1780272000, open: 1.1, high: 1.11, low: 1.09, close: 1.105, volume: 100 },
@@ -25,7 +35,7 @@ vi.mock("../../src/api/rates", () => ({
 describe("Layout", () => {
   it("renders all three panels", () => {
     render(<Layout />);
-    expect(screen.getByText("EURUSD")).toBeInTheDocument();
+    expect(screen.getAllByText("EURUSD")).toHaveLength(2);
     expect(screen.getByText("GBPUSD")).toBeInTheDocument();
     expect(screen.getByText("BTCUSD")).toBeInTheDocument();
   });

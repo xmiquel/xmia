@@ -9,18 +9,18 @@ const mockCandles: Candle[] = [
 
 describe("PriceChart", () => {
   it("shows loading state", () => {
-    render(<PriceChart data={[]} symbol="EURUSD" loading={true} error={null} />);
+    render(<PriceChart data={[]} symbol="EURUSD" digits={5} loading={true} error={null} />);
     expect(screen.getByText(/loading/i)).toBeInTheDocument();
   });
 
   it("shows error state", () => {
-    render(<PriceChart data={[]} symbol="EURUSD" loading={false} error="Rates unavailable" />);
+    render(<PriceChart data={[]} symbol="EURUSD" digits={5} loading={false} error="Rates unavailable" />);
     expect(screen.getByText(/Rates unavailable/i)).toBeInTheDocument();
   });
 
   it("renders chart container when data is provided", () => {
     const { container } = render(
-      <PriceChart data={mockCandles} symbol="EURUSD" loading={false} error={null} />,
+      <PriceChart data={mockCandles} symbol="EURUSD" digits={5} loading={false} error={null} />,
     );
     expect(container.querySelector(".price-chart")).toBeInTheDocument();
   });

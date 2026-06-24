@@ -4,6 +4,7 @@ import PriceChart from "./PriceChart";
 import AccountSummary from "./AccountSummary";
 import TimeframeSelector from "./TimeframeSelector";
 import { getAccountInfo } from "../api/account";
+import { getSymbolInfo } from "../api/symbols";
 import { getRates } from "../api/rates";
 import type { AccountInfo, Candle } from "../types";
 import "./Layout.css";
@@ -23,6 +24,8 @@ export default function Layout() {
   const [candlesLoading, setCandlesLoading] = useState(true);
   const [candlesError, setCandlesError] = useState<string | null>(null);
 
+  const [digits, setDigits] = useState(5);
+
   const fetchAccount = useCallback(async () => {
     try {
       setAccountLoading(true);
@@ -35,6 +38,17 @@ export default function Layout() {
       setAccountLoading(false);
     }
   }, []);
+
+  const fetchSymbolInfo = useCallback(async () => {
+    try {
+      const info = await getSymbolInfo(selectedSymbol);
+      if (info?.digits) {
+        setDigits(info.digits);
+      }
+    } catch {
+      setDigits(5);
+    }
+  }, [selectedSymbol]);
 
   const fetchRates = useCallback(async () => {
     try {
@@ -57,9 +71,10 @@ export default function Layout() {
 
   useEffect(() => {
     fetchRates();
+    fetchSymbolInfo();
     const interval = setInterval(fetchRates, POLL_INTERVAL);
     return () => clearInterval(interval);
-  }, [fetchRates]);
+  }, [fetchRates, fetchSymbolInfo]);
 
   return (
     <div className="dashboard-layout">
@@ -72,6 +87,7 @@ export default function Layout() {
         <PriceChart
           data={candles}
           symbol={selectedSymbol}
+          digits={digits}
           loading={candlesLoading}
           error={candlesError}
         />
