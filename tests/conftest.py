@@ -3,6 +3,16 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 
+def pytest_addoption(parser):
+    parser.addoption("--runlive", action="store_true", default=False, help="Run live MT5 tests")
+
+
+@pytest.fixture
+def runlive(request):
+    if not request.config.getoption("--runlive"):
+        pytest.skip("requires --runlive flag")
+
+
 @pytest.fixture
 def fake_adapter():
     from mt5.fake import FakeMT5Adapter

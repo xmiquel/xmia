@@ -77,7 +77,7 @@ class TestFakeContract(BaseContractTest):
         return FakeMT5Adapter()
 
 
-@pytest.mark.skip(reason="Live tests require MT5 terminal with MetaTrader5 package installed")
+@pytest.mark.usefixtures("runlive")
 class TestLiveContract(BaseContractTest):
     def make_adapter(self):
         from mt5.live import LiveMT5Adapter
