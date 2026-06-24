@@ -1,0 +1,6 @@
+﻿.dashboard-layout {
+  display: grid;
+  grid-template-columns: 140px 1fr 220px;
+  height: 100vh;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
