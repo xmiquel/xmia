@@ -25,7 +25,7 @@ mt5 = [
 ]
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/mt5"]
+packages = ["src/mt5", "src/api"]
 
 [tool.ruff]
 target-version = "py311"
@@ -72,3 +72,8 @@ exclude_lines = [
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
+
+[dependency-groups]
+dev = [
+    "httpx>=0.28.1",
+]

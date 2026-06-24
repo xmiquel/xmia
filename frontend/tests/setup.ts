@@ -14,31 +14,9 @@ Object.defineProperty(window, "matchMedia", {
   }),
 });
 
-HTMLCanvasElement.prototype.getContext = function () {
+HTMLCanvasElement.prototype.getContext = (() => {
   return {
-    fillRect: () => {},
     clearRect: () => {},
-    getImageData: () => ({ data: [] }),
-    putImageData: () => {},
-    createImageData: () => [],
-    setTransform: () => {},
-    drawImage: () => {},
-    save: () => {},
-    fillText: () => {},
-    restore: () => {},
-    beginPath: () => {},
-    moveTo: () => {},
-    lineTo: () => {},
-    closePath: () => {},
-    stroke: () => {},
-    translate: () => {},
-    scale: () => {},
-    rotate: () => {},
-    arc: () => {},
-    fill: () => {},
-    measureText: () => ({ width: 0 }),
-    transform: () => {},
-    rect: () => {},
-    clip: () => {},
-  };
-};
+    canvas: document.createElement("canvas"),
+  } as unknown as CanvasRenderingContext2D;
+}) as unknown as typeof HTMLCanvasElement.prototype.getContext;
