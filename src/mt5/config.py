@@ -1,4 +1,4 @@
-import os
+﻿import os
 
 from pydantic import BaseModel, field_validator
 
@@ -15,8 +15,8 @@ class MT5Config(BaseModel):
     @classmethod
     def from_env(cls) -> "MT5Config":
         return cls(
-            terminal_path=os.getenv("MT5_TERMINAL_PATH"),
-            account_number=int(os.getenv("MT5_ACCOUNT_NUMBER", "0")),
+            terminal_path=os.getenv("MT5_PATH"),
+            account_number=int(os.getenv("MT5_LOGIN", "0")),
             password=os.getenv("MT5_PASSWORD", ""),
             server=os.getenv("MT5_SERVER", ""),
             timeout=int(os.getenv("MT5_TIMEOUT", "30")),

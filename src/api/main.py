@@ -1,5 +1,6 @@
-from contextlib import asynccontextmanager
+﻿from contextlib import asynccontextmanager
 
+from dotenv import load_dotenv
 from fastapi import FastAPI
 
 from mt5.config import MT5Config
@@ -9,6 +10,8 @@ from api.errors import add_error_handlers
 from api.routers.account import router as account_router
 from api.routers.rates import router as rates_router
 from api.routers.symbols import router as symbols_router
+
+load_dotenv()
 
 
 def create_app(adapter: MT5Adapter | None = None) -> FastAPI:
