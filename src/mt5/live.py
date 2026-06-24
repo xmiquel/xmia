@@ -147,18 +147,19 @@ class LiveMT5Adapter:
         if not self._connected:
             raise AdapterNotConnectedError("Not connected")
 
+        mt5.symbol_select(symbol, True)
         rates = mt5.copy_rates_from_pos(symbol, timeframe, 0, count)
         if rates is None:
             return []
 
         return [
             {
-                "time": datetime.fromtimestamp(r[0]),
-                "open": r[1],
-                "high": r[2],
-                "low": r[3],
-                "close": r[4],
-                "volume": r[5],
+                "time": datetime.fromtimestamp(int(r[0])),
+                "open": float(r[1]),
+                "high": float(r[2]),
+                "low": float(r[3]),
+                "close": float(r[4]),
+                "volume": int(r[5]),
             }
             for r in rates
         ]
