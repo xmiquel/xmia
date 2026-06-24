@@ -9,7 +9,9 @@ def test_get_rates_default(client, fake_adapter):
     assert "high" in candle
     assert "low" in candle
     assert "close" in candle
-    assert "volume" in candle
+    assert "tick_volume" in candle
+    assert "spread" in candle
+    assert "real_volume" in candle
 
 
 def test_get_rates_with_custom_params(client, fake_adapter):

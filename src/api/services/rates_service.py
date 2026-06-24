@@ -1,5 +1,5 @@
-from mt5.protocol import MT5Adapter
 from api.timeframes import parse_timeframe
+from mt5.protocol import MT5Adapter
 
 
 class RatesService:

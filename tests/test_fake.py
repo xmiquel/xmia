@@ -107,7 +107,9 @@ class TestFakeMT5AdapterData:
         assert "high" in r
         assert "low" in r
         assert "close" in r
-        assert "volume" in r
+        assert "tick_volume" in r
+        assert "spread" in r
+        assert "real_volume" in r
 
 
 class TestFakeMT5AdapterOrders:

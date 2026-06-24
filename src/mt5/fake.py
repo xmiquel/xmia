@@ -157,7 +157,9 @@ class FakeMT5Adapter:
                 "high": base + 0.0005,
                 "low": base - 0.0005,
                 "close": base + 0.0002,
-                "volume": 100 + i * 10,
+                "tick_volume": 100 + i * 10,
+                "spread": 5 + (i % 15),
+                "real_volume": (100 + i * 10) * 1000,
             })
         return rates
 

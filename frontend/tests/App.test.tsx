@@ -18,7 +18,7 @@ vi.mock("../src/api/account", () => ({
 
 vi.mock("../src/api/rates", () => ({
   getRates: vi.fn().mockResolvedValue([
-    { time: 1780272000, open: 1.1, high: 1.11, low: 1.09, close: 1.105, volume: 100 },
+    { time: 1780272000, open: 1.1, high: 1.11, low: 1.09, close: 1.105, tick_volume: 100, spread: 10, real_volume: 100000 },
   ]),
 }));
 

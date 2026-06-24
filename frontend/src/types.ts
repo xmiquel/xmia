@@ -24,5 +24,7 @@ export interface Candle {
   high: number;
   low: number;
   close: number;
-  volume: number;
+  tick_volume: number;
+  spread: number;
+  real_volume: number;
 }

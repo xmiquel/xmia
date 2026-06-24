@@ -1,0 +1,20 @@
+.data-window {
+  user-select: none;
+}
+.dw-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+}
+.dw-label {
+  color: #888;
+}
+.dw-value {
+  color: #fff;
+  text-align: right;
+}
+.dw-divider {
+  height: 1px;
+  background: rgba(255, 255, 255, 0.15);
+  margin: 3px 0;
+}

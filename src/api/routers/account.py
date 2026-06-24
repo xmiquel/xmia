@@ -1,8 +1,8 @@
 from fastapi import APIRouter, Depends
 
-from mt5.protocol import MT5Adapter
 from api.dependencies import get_adapter
 from api.services.account_service import AccountService
+from mt5.protocol import MT5Adapter
 
 router = APIRouter(tags=["Account"])
 

@@ -1,15 +1,17 @@
 from fastapi import APIRouter, Depends, HTTPException, Path, Query
 from starlette.status import HTTP_422_UNPROCESSABLE_CONTENT
 
-from mt5.protocol import MT5Adapter
 from api.dependencies import get_adapter
 from api.services.rates_service import RatesService
 from api.timeframes import VALID_TIMEFRAMES
+from mt5.protocol import MT5Adapter
 
 router = APIRouter(tags=["Rates"])
 
 
-def _validate_timeframe(timeframe: str = Query("PERIOD_H1", description="MT5 timeframe constant")) -> str:
+def _validate_timeframe(
+    timeframe: str = Query("PERIOD_H1", description="MT5 timeframe constant"),
+) -> str:
     if timeframe.upper() not in VALID_TIMEFRAMES:
         raise HTTPException(
             status_code=HTTP_422_UNPROCESSABLE_CONTENT,

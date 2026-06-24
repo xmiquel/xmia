@@ -13,8 +13,8 @@ def fake_adapter():
 
 @pytest.fixture
 def client(fake_adapter):
-    from api.main import create_app
     from api.dependencies import get_adapter
+    from api.main import create_app
 
     app = create_app(fake_adapter)
     app.dependency_overrides[get_adapter] = lambda: fake_adapter

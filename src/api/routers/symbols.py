@@ -1,8 +1,8 @@
 from fastapi import APIRouter, Depends, Path
 
-from mt5.protocol import MT5Adapter
 from api.dependencies import get_adapter
 from api.services.symbols_service import SymbolsService
+from mt5.protocol import MT5Adapter
 
 router = APIRouter(tags=["Symbols"])
 

@@ -1,6 +1,5 @@
 import os
 
-import pytest
 from fastapi import Depends
 from fastapi.testclient import TestClient
 
@@ -9,8 +8,8 @@ from mt5.fake import FakeMT5Adapter
 
 def test_verify_api_key_missing_when_configured():
     os.environ["API_KEY"] = "sk-test123"
-    from api.main import create_app
     from api.dependencies import verify_api_key
+    from api.main import create_app
 
     adapter = FakeMT5Adapter()
     adapter.initialize(login=1, password="p", server="s")
@@ -28,8 +27,8 @@ def test_verify_api_key_missing_when_configured():
 
 def test_verify_api_key_valid():
     os.environ["API_KEY"] = "sk-test123"
-    from api.main import create_app
     from api.dependencies import verify_api_key
+    from api.main import create_app
 
     adapter = FakeMT5Adapter()
     adapter.initialize(login=1, password="p", server="s")
@@ -47,8 +46,8 @@ def test_verify_api_key_valid():
 
 def test_verify_api_key_invalid():
     os.environ["API_KEY"] = "sk-test123"
-    from api.main import create_app
     from api.dependencies import verify_api_key
+    from api.main import create_app
 
     adapter = FakeMT5Adapter()
     adapter.initialize(login=1, password="p", server="s")
@@ -66,8 +65,8 @@ def test_verify_api_key_invalid():
 
 def test_verify_api_key_disabled_in_dev():
     os.environ.pop("API_KEY", None)
-    from api.main import create_app
     from api.dependencies import verify_api_key
+    from api.main import create_app
 
     adapter = FakeMT5Adapter()
     adapter.initialize(login=1, password="p", server="s")

@@ -154,7 +154,7 @@ class TestLiveMT5AdapterData:
 
     def test_get_rates(self, mt5_mock, adapter):
         mt5_mock.initialize.return_value = True
-        mock_rates = [(1700000000, 1.1, 1.2, 1.0, 1.15, 100)]
+        mock_rates = [(1700000000, 1.1, 1.2, 1.0, 1.15, 100, 10, 100000)]
         mt5_mock.copy_rates_from_pos.return_value = mock_rates
         adapter.initialize()
         rates = adapter.get_rates("EURUSD", 1, 1)

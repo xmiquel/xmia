@@ -1,7 +1,8 @@
-﻿import { useEffect, useRef } from "react";
+﻿import { useEffect, useRef, useState } from "react";
 import { createChart, ColorType } from "lightweight-charts";
 import type { IChartApi, ISeriesApi, UTCTimestamp } from "lightweight-charts";
 import type { Candle } from "../types";
+import DataWindow from "./DataWindow";
 import "./PriceChart.css";
 
 interface Props {
@@ -17,6 +18,9 @@ export default function PriceChart({ data, symbol, digits, loading, error }: Pro
   const chartRef = useRef<IChartApi | null>(null);
   const seriesRef = useRef<ISeriesApi<"Candlestick"> | null>(null);
   const symbolRef = useRef(symbol);
+  const dataMapRef = useRef<Map<number, Candle>>(new Map());
+  const [hoveredCandle, setHoveredCandle] = useState<Candle | null>(null);
+  const [tooltipPos, setTooltipPos] = useState<{ x: number; y: number } | null>(null);
 
   useEffect(() => {
     if (!chartContainerRef.current) return;
@@ -51,6 +55,19 @@ export default function PriceChart({ data, symbol, digits, loading, error }: Pro
       wickUpColor: "#000000",
     });
 
+    chart.subscribeCrosshairMove((param) => {
+      if (!param.time || !param.point) {
+        setHoveredCandle(null);
+        setTooltipPos(null);
+        return;
+      }
+      const candle = dataMapRef.current.get(param.time as number);
+      if (candle) {
+        setTooltipPos({ x: param.point.x, y: param.point.y });
+        setHoveredCandle(candle);
+      }
+    });
+
     chartRef.current = chart;
     seriesRef.current = series;
 
@@ -73,6 +90,10 @@ export default function PriceChart({ data, symbol, digits, loading, error }: Pro
     const series = seriesRef.current;
     if (!series || data.length === 0) return;
 
+    const map = new Map<number, Candle>();
+    data.forEach((c) => map.set(c.time, c));
+    dataMapRef.current = map;
+
     series.setData(
       data.map((c) => ({
         time: c.time as UTCTimestamp,
@@ -88,6 +109,8 @@ export default function PriceChart({ data, symbol, digits, loading, error }: Pro
 
     if (isNewSymbol) {
       chartRef.current?.timeScale().fitContent();
+      setHoveredCandle(null);
+      setTooltipPos(null);
     }
   }, [data, symbol]);
 
@@ -102,9 +125,11 @@ export default function PriceChart({ data, symbol, digits, loading, error }: Pro
   }, [digits]);
 
   return (
-    <div className="price-chart">
+    <div className="price-chart" style={{ position: "relative" }}>
       <h2>{symbol}</h2>
-      <div className="chart-container" ref={chartContainerRef} />
+      <div className="chart-container" ref={chartContainerRef}>
+        <DataWindow candle={hoveredCandle} digits={digits} position={tooltipPos} />
+      </div>
       {loading && <div className="loading">Loading chart...</div>}
       {error && <div className="error">{error}</div>}
     </div>

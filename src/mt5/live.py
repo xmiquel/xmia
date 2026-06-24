@@ -100,7 +100,7 @@ class LiveMT5Adapter:
             mt5 = self._import_mt5()
             mt5.shutdown()
         except Exception:
-            pass
+            self._logger.exception("Error during MT5 shutdown")
         finally:
             self._connected = False
             self._authenticated = False
@@ -159,7 +159,9 @@ class LiveMT5Adapter:
                 "high": float(r[2]),
                 "low": float(r[3]),
                 "close": float(r[4]),
-                "volume": int(r[5]),
+                "tick_volume": int(r[5]),
+                "spread": int(r[6]),
+                "real_volume": int(r[7]),
             }
             for r in rates
         ]
