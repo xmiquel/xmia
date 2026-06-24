@@ -1,0 +1,32 @@
+﻿.account-summary {
+  padding: 16px;
+  border-left: 1px solid #e0e0e0;
+  min-width: 220px;
+}
+.account-summary h2 {
+  margin: 0 0 16px;
+  font-size: 16px;
+  color: #333;
+}
+.account-summary .field {
+  display: flex;
+  justify-content: space-between;
+  padding: 6px 0;
+  border-bottom: 1px solid #f0f0f0;
+  font-size: 13px;
+}
+.account-summary .field-label {
+  color: #666;
+}
+.account-summary .field-value {
+  font-weight: 600;
+  color: #222;
+}
+.account-summary .error {
+  color: #d32f2f;
+  font-size: 13px;
+}
+.account-summary .loading {
+  color: #666;
+  font-size: 13px;
+}
