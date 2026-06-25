@@ -1,0 +1,34 @@
+Commits: a6c7937..c34764e
+ frontend/src/api/rates.ts | 16 ++++++++++++++++
+ 1 file changed, 16 insertions(+)
+diff --git a/frontend/src/api/rates.ts b/frontend/src/api/rates.ts
+index 08ebad4..9725464 100644
+--- a/frontend/src/api/rates.ts
++++ b/frontend/src/api/rates.ts
+@@ -4,10 +4,26 @@ import type { Candle } from "../types";
+ export function getRates(
+   symbol: string,
+   timeframe = "PERIOD_H1",
+   count = 100,
+ ): Promise<Candle[]> {
+   const params = new URLSearchParams({ timeframe, count: String(count) });
+   return fetchClient(
+     `/api/v1/rates/${encodeURIComponent(symbol)}?${params}`,
+   ) as Promise<Candle[]>;
+ }
++
++export function getRatesBeforeSymbol(
++  symbol: string,
++  timeframe: string,
++  count: number,
++  before: number,
++): Promise<Candle[]> {
++  const params = new URLSearchParams({
++    timeframe,
++    count: String(count),
++    before: String(before),
++  });
++  return fetchClient(
++    `/api/v1/rates/${encodeURIComponent(symbol)}?${params}`,
++  ) as Promise<Candle[]>;
++}

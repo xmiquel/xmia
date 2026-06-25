@@ -1,0 +1,241 @@
+Commits: a47a3d0..9915dea
+
+
+ src/mt5/fake.py        | 23 +++++++++++++++++++++++
+ src/mt5/live.py        | 27 +++++++++++++++++++++++++++
+ src/mt5/protocol.py    |  5 +++++
+ tests/test_fake.py     | 50 ++++++++++++++++++++++++++++++++++++++++++++++++++
+ tests/test_protocol.py |  1 +
+ 5 files changed, 106 insertions(+)
+
+diff --git a/src/mt5/fake.py b/src/mt5/fake.py
+index 6d2bf83..0e9eff1 100644
+--- a/src/mt5/fake.py
++++ b/src/mt5/fake.py
+@@ -156,20 +156,43 @@ class FakeMT5Adapter:
+                 "open": base,
+                 "high": base + 0.0005,
+                 "low": base - 0.0005,
+                 "close": base + 0.0002,
+                 "tick_volume": 100 + i * 10,
+                 "spread": 5 + (i % 15),
+                 "real_volume": (100 + i * 10) * 1000,
+             })
+         return rates
+ 
++    def get_rates_before(
++        self, symbol: str, timeframe: int, count: int, before: int
++    ) -> list[dict[str, object]]:
++        self._check_error("get_rates_before")
++        self._require_state(AdapterState.INITIALIZED, AdapterState.AUTHENTICATED)
++
++        rates = []
++        current_time = before - 1
++        for i in range(count):
++            t = datetime.fromtimestamp(current_time) - timedelta(hours=timeframe * i)
++            base = 1.1000 - (i * 0.0001)
++            rates.append({
++                "time": int(t.timestamp()),
++                "open": base,
++                "high": base + 0.0005,
++                "low": base - 0.0005,
++                "close": base + 0.0002,
++                "tick_volume": 100 + i * 10,
++                "spread": 5 + (i % 15),
++                "real_volume": (100 + i * 10) * 1000,
++            })
++        return [r for r in rates if r["time"] < before]
++
+     def get_positions(self) -> list[PositionInfo]:
+         self._check_error("get_positions")
+         self._require_state(AdapterState.AUTHENTICATED)
+ 
+         return [
+             PositionInfo(
+                 ticket=pos.ticket,
+                 symbol=pos.symbol,
+                 volume=pos.volume,
+                 type_=pos.type_,
+diff --git a/src/mt5/live.py b/src/mt5/live.py
+index 3aa242b..2ad7601 100644
+--- a/src/mt5/live.py
++++ b/src/mt5/live.py
+@@ -159,20 +159,47 @@ class LiveMT5Adapter:
+                 "high": float(r[2]),
+                 "low": float(r[3]),
+                 "close": float(r[4]),
+                 "tick_volume": int(r[5]),
+                 "spread": int(r[6]),
+                 "real_volume": int(r[7]),
+             }
+             for r in rates
+         ]
+ 
++    def get_rates_before(
++        self, symbol: str, timeframe: int, count: int, before: int
++    ) -> list[dict[str, object]]:
++        mt5 = self._import_mt5()
++        if not self._connected:
++            raise AdapterNotConnectedError("Not connected")
++
++        mt5.symbol_select(symbol, True)
++        rates = mt5.copy_rates_from(symbol, timeframe, before, count)
++        if rates is None:
++            return []
++
++        return [
++            {
++                "time": int(r[0]),
++                "open": float(r[1]),
++                "high": float(r[2]),
++                "low": float(r[3]),
++                "close": float(r[4]),
++                "tick_volume": int(r[5]),
++                "spread": int(r[6]),
++                "real_volume": int(r[7]),
++            }
++            for r in rates
++            if int(r[0]) < before
++        ]
++
+     def get_positions(self) -> list[PositionInfo]:
+         mt5 = self._import_mt5()
+         if not self._authenticated:
+             raise AdapterNotConnectedError("Not authenticated")
+ 
+         positions = mt5.positions_get()
+         if positions is None:
+             return []
+ 
+         return [
+diff --git a/src/mt5/protocol.py b/src/mt5/protocol.py
+index 4b35d30..554039c 100644
+--- a/src/mt5/protocol.py
++++ b/src/mt5/protocol.py
+@@ -78,20 +78,25 @@ class MT5Adapter(Protocol):
+ 
+     def get_account_info(self) -> AccountInfo:
+         ...
+ 
+     def get_symbol_info(self, symbol: str) -> dict[str, object] | None:
+         ...
+ 
+     def get_rates(self, symbol: str, timeframe: int, count: int) -> list[dict[str, object]]:
+         ...
+ 
++    def get_rates_before(
++        self, symbol: str, timeframe: int, count: int, before: int
++    ) -> list[dict[str, object]]:
++        ...
++
+     def get_positions(self) -> list[PositionInfo]:
+         ...
+ 
+     def get_orders(self) -> list[dict[str, object]]:
+         ...
+ 
+     def send_order(
+         self, symbol: str, volume: float, type_: int,
+         price: float, sl: float = 0, tp: float = 0,
+     ) -> OrderResult:
+diff --git a/tests/test_fake.py b/tests/test_fake.py
+index a80f21a..7ccf473 100644
+--- a/tests/test_fake.py
++++ b/tests/test_fake.py
+@@ -104,20 +104,70 @@ class TestFakeMT5AdapterData:
+         r = rates[0]
+         assert "time" in r
+         assert "open" in r
+         assert "high" in r
+         assert "low" in r
+         assert "close" in r
+         assert "tick_volume" in r
+         assert "spread" in r
+         assert "real_volume" in r
+ 
++    def test_get_rates_before_returns_count(self):
++        adapter = FakeMT5Adapter()
++        adapter.initialize()
++        before = int(datetime.now().timestamp()) + 100000
++        rates = adapter.get_rates_before("EURUSD", 1, 10, before)
++        assert len(rates) == 10
++
++    def test_get_rates_before_all_before_timestamp(self):
++        adapter = FakeMT5Adapter()
++        adapter.initialize()
++        before = int(datetime.now().timestamp()) + 100000
++        rates = adapter.get_rates_before("EURUSD", 1, 10, before)
++        for r in rates:
++            assert r["time"] < before
++
++    def test_get_rates_before_filters_recent(self):
++        adapter = FakeMT5Adapter()
++        adapter.initialize()
++        before = int(datetime.now().timestamp()) - 1000
++        rates = adapter.get_rates_before("EURUSD", 1, 10, before)
++        for r in rates:
++            assert r["time"] < before
++
++    def test_get_rates_before_has_required_fields(self):
++        adapter = FakeMT5Adapter()
++        adapter.initialize()
++        before = int(datetime.now().timestamp()) + 100000
++        rates = adapter.get_rates_before("EURUSD", 1, 1, before)
++        r = rates[0]
++        assert "time" in r
++        assert "open" in r
++        assert "high" in r
++        assert "low" in r
++        assert "close" in r
++        assert "tick_volume" in r
++        assert "spread" in r
++        assert "real_volume" in r
++
++    def test_get_rates_before_requires_state(self):
++        adapter = FakeMT5Adapter()
++        with pytest.raises(AdapterNotConnectedError):
++            adapter.get_rates_before("EURUSD", 1, 1, 1000000)
++
++    def test_get_rates_before_error_mode(self):
++        adapter = FakeMT5Adapter()
++        adapter.initialize()
++        adapter.set_error_mode("get_rates_before", ConnectionError)
++        with pytest.raises(ConnectionError):
++            adapter.get_rates_before("EURUSD", 1, 1, 1000000)
++
+ 
+ class TestFakeMT5AdapterOrders:
+     def test_send_market_order_creates_position(self):
+         adapter = FakeMT5Adapter()
+         adapter.initialize(login=1, password="p", server="s")
+         result = adapter.send_order("EURUSD", 0.1, 0, 1.1000)
+         assert result.ticket > 0
+         assert result.filled_volume == 0.1
+         positions = adapter.get_positions()
+         assert len(positions) == 1
+diff --git a/tests/test_protocol.py b/tests/test_protocol.py
+index a32e827..f3839d7 100644
+--- a/tests/test_protocol.py
++++ b/tests/test_protocol.py
+@@ -6,20 +6,21 @@ class TestMT5AdapterProtocol:
+         assert hasattr(MT5Adapter, "__instancecheck__")
+ 
+     def test_protocol_methods_signatures(self):
+         expected_methods = [
+             "initialize",
+             "login",
+             "shutdown",
+             "get_account_info",
+             "get_symbol_info",
+             "get_rates",
++            "get_rates_before",
+             "get_positions",
+             "get_orders",
+             "send_order",
+             "modify_order",
+             "modify_position",
+             "cancel_order",
+             "get_history_deals",
+         ]
+         for name in expected_methods:
+             assert hasattr(MT5Adapter, name), f"Missing method: {name}"

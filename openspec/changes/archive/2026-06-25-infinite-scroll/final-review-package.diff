@@ -1,0 +1,675 @@
+Full branch review: a47a3d0..HEAD
+
+
+ frontend/src/api/rates.ts                     | 16 ++++++++
+ frontend/src/components/Layout.tsx            | 54 ++++++++++++++++++++++++---
+ frontend/src/components/PriceChart.tsx        | 14 ++++++-
+ frontend/tests/components/Layout.test.tsx     | 13 ++++++-
+ frontend/tests/components/PriceChart.test.tsx | 10 ++++-
+ src/api/routers/rates.py                      |  3 ++
+ src/api/services/rates_service.py             |  4 ++
+ src/mt5/fake.py                               | 26 +++++++++++++
+ src/mt5/live.py                               | 27 ++++++++++++++
+ src/mt5/protocol.py                           |  5 +++
+ tests/api/test_rates.py                       | 21 +++++++++++
+ tests/test_fake.py                            | 50 +++++++++++++++++++++++++
+ tests/test_protocol.py                        |  1 +
+ 13 files changed, 236 insertions(+), 8 deletions(-)
+
+diff --git a/frontend/src/api/rates.ts b/frontend/src/api/rates.ts
+index 08ebad4..9725464 100644
+--- a/frontend/src/api/rates.ts
++++ b/frontend/src/api/rates.ts
+@@ -4,10 +4,26 @@ import type { Candle } from "../types";
+ export function getRates(
+   symbol: string,
+   timeframe = "PERIOD_H1",
+   count = 100,
+ ): Promise<Candle[]> {
+   const params = new URLSearchParams({ timeframe, count: String(count) });
+   return fetchClient(
+     `/api/v1/rates/${encodeURIComponent(symbol)}?${params}`,
+   ) as Promise<Candle[]>;
+ }
++
++export function getRatesBeforeSymbol(
++  symbol: string,
++  timeframe: string,
++  count: number,
++  before: number,
++): Promise<Candle[]> {
++  const params = new URLSearchParams({
++    timeframe,
++    count: String(count),
++    before: String(before),
++  });
++  return fetchClient(
++    `/api/v1/rates/${encodeURIComponent(symbol)}?${params}`,
++  ) as Promise<Candle[]>;
++}
+diff --git a/frontend/src/components/Layout.tsx b/frontend/src/components/Layout.tsx
+index e7f93b1..9ff3ec2 100644
+--- a/frontend/src/components/Layout.tsx
++++ b/frontend/src/components/Layout.tsx
+@@ -1,35 +1,44 @@
+-ด++import { useState, useEffect, useCallback } from "react";
++ด++import { useState, useEffect, useCallback, useRef } from "react";
+ import Watchlist from "./Watchlist";
+ import PriceChart from "./PriceChart";
+ import AccountSummary from "./AccountSummary";
+ import TimeframeSelector from "./TimeframeSelector";
+ import { getAccountInfo } from "../api/account";
+ import { getSymbolInfo } from "../api/symbols";
+-import { getRates } from "../api/rates";
++import { getRates, getRatesBeforeSymbol } from "../api/rates";
+ import type { AccountInfo, Candle } from "../types";
+ import "./Layout.css";
+ 
+ const DEFAULT_SYMBOLS = ["EURUSD", "GBPUSD", "BTCUSD"];
+ const POLL_INTERVAL = 10_000;
+ 
+ export default function Layout() {
+   const [selectedSymbol, setSelectedSymbol] = useState("EURUSD");
+   const [timeframe, setTimeframe] = useState("PERIOD_H1");
+ 
+   const [account, setAccount] = useState<AccountInfo | null>(null);
+   const [accountLoading, setAccountLoading] = useState(true);
+   const [accountError, setAccountError] = useState<string | null>(null);
+ 
+-  const [candles, setCandles] = useState<Candle[]>([]);
++  const [allCandles, setAllCandles] = useState<Candle[]>([]);
+   const [candlesLoading, setCandlesLoading] = useState(true);
+   const [candlesError, setCandlesError] = useState<string | null>(null);
++  const [isLoadingMore, setIsLoadingMore] = useState(false);
++  const [hasMore, setHasMore] = useState(true);
++  const isLoadingMoreRef = useRef(false);
++  const hasMoreRef = useRef(true);
++  const allCandlesRef = useRef<Candle[]>([]);
++
++  isLoadingMoreRef.current = isLoadingMore;
++  hasMoreRef.current = hasMore;
++  allCandlesRef.current = allCandles;
+ 
+   const [digits, setDigits] = useState(5);
+ 
+   const fetchAccount = useCallback(async () => {
+     try {
+       setAccountLoading(true);
+       setAccountError(null);
+       const data = await getAccountInfo();
+       setAccount(data);
+     } catch (err) {
+@@ -48,28 +57,62 @@ export default function Layout() {
+     } catch {
+       setDigits(5);
+     }
+   }, [selectedSymbol]);
+ 
+   const fetchRates = useCallback(async () => {
+     try {
+       setCandlesLoading(true);
+       setCandlesError(null);
+       const data = await getRates(selectedSymbol, timeframe, 100);
+-      setCandles(data);
++      setAllCandles((prev) => {
++        const existingTimes = new Set(prev.map((c) => c.time));
++        const newCandles = data.filter((c) => !existingTimes.has(c.time));
++        return [...prev, ...newCandles].sort((a, b) => a.time - b.time);
++      });
+     } catch (err) {
+       setCandlesError(err instanceof Error ? err.message : "Failed to load rates");
+     } finally {
+       setCandlesLoading(false);
+     }
+   }, [selectedSymbol, timeframe]);
+ 
++  const handleVisibleRangeChange = useCallback(
++    async (from: number) => {
++      if (isLoadingMoreRef.current || !hasMoreRef.current || allCandlesRef.current.length === 0) return;
++      const totalBars = allCandlesRef.current.length;
++      const threshold = totalBars * 0.15;
++      if (from > threshold) return;
++
++      setIsLoadingMore(true);
++      const earliest = allCandlesRef.current[0].time;
++      try {
++        const olderCandles = await getRatesBeforeSymbol(
++          selectedSymbol,
++          timeframe,
++          500,
++          earliest,
++        );
++        if (olderCandles.length === 0) {
++          setHasMore(false);
++        } else {
++          setAllCandles((prev) => [...olderCandles, ...prev]);
++        }
++      } catch {
++        // silent ิว๖ TradingView-style
++      } finally {
++        setIsLoadingMore(false);
++      }
++    },
++    [selectedSymbol, timeframe],
++  );
++
+   useEffect(() => {
+     fetchAccount();
+     const interval = setInterval(fetchAccount, POLL_INTERVAL);
+     return () => clearInterval(interval);
+   }, [fetchAccount]);
+ 
+   useEffect(() => {
+     fetchRates();
+     fetchSymbolInfo();
+     const interval = setInterval(fetchRates, POLL_INTERVAL);
+@@ -78,25 +121,26 @@ export default function Layout() {
+ 
+   return (
+     <div className="dashboard-layout">
+       <Watchlist
+         symbols={DEFAULT_SYMBOLS}
+         selected={selectedSymbol}
+         onSelect={setSelectedSymbol}
+       />
+       <div>
+         <PriceChart
+-          data={candles}
++          data={allCandles}
+           symbol={selectedSymbol}
+           digits={digits}
+           loading={candlesLoading}
+           error={candlesError}
++          onVisibleRangeChange={handleVisibleRangeChange}
+         />
+         <TimeframeSelector value={timeframe} onChange={setTimeframe} />
+       </div>
+       <AccountSummary
+         account={account}
+         loading={accountLoading}
+         error={accountError}
+       />
+     </div>
+   );
+diff --git a/frontend/src/components/PriceChart.tsx b/frontend/src/components/PriceChart.tsx
+index 1a0211b..1c30b33 100644
+--- a/frontend/src/components/PriceChart.tsx
++++ b/frontend/src/components/PriceChart.tsx
+@@ -4,28 +4,30 @@ import type { IChartApi, ISeriesApi, UTCTimestamp } from "lightweight-charts";
+ import type { Candle } from "../types";
+ import DataWindow from "./DataWindow";
+ import "./PriceChart.css";
+ 
+ interface Props {
+   data: Candle[];
+   symbol: string;
+   digits: number;
+   loading: boolean;
+   error: string | null;
++  onVisibleRangeChange?: (from: number, to: number) => void;
+ }
+ 
+-export default function PriceChart({ data, symbol, digits, loading, error }: Props) {
++export default function PriceChart({ data, symbol, digits, loading, error, onVisibleRangeChange }: Props) {
+   const chartContainerRef = useRef<HTMLDivElement>(null);
+   const chartRef = useRef<IChartApi | null>(null);
+   const seriesRef = useRef<ISeriesApi<"Candlestick"> | null>(null);
+   const symbolRef = useRef(symbol);
+   const dataMapRef = useRef<Map<number, Candle>>(new Map());
++  const visibleRangeCbRef = useRef(onVisibleRangeChange);
+   const [hoveredCandle, setHoveredCandle] = useState<Candle | null>(null);
+   const [tooltipPos, setTooltipPos] = useState<{ x: number; y: number } | null>(null);
+ 
+   useEffect(() => {
+     if (!chartContainerRef.current) return;
+ 
+     const chart = createChart(chartContainerRef.current, {
+       width: chartContainerRef.current.clientWidth,
+       height: 400,
+       layout: {
+@@ -61,38 +63,48 @@ export default function PriceChart({ data, symbol, digits, loading, error }: Pro
+         setTooltipPos(null);
+         return;
+       }
+       const candle = dataMapRef.current.get(param.time as number);
+       if (candle) {
+         setTooltipPos({ x: param.point.x, y: param.point.y });
+         setHoveredCandle(candle);
+       }
+     });
+ 
++    chart.timeScale().subscribeVisibleLogicalRangeChange((range) => {
++      if (range && visibleRangeCbRef.current) {
++        visibleRangeCbRef.current(range.from, range.to);
++      }
++    });
++
+     chartRef.current = chart;
+     seriesRef.current = series;
+ 
+     const handleResize = () => {
+       if (chartContainerRef.current && chartRef.current) {
+         chartRef.current.applyOptions({ width: chartContainerRef.current.clientWidth });
+       }
+     };
+     window.addEventListener("resize", handleResize);
+ 
+     return () => {
+       window.removeEventListener("resize", handleResize);
+       chart.remove();
+       chartRef.current = null;
+       seriesRef.current = null;
+     };
+   }, []);
+ 
++  useEffect(() => {
++    visibleRangeCbRef.current = onVisibleRangeChange;
++  }, [onVisibleRangeChange]);
++
+   useEffect(() => {
+     const series = seriesRef.current;
+     if (!series || data.length === 0) return;
+ 
+     const map = new Map<number, Candle>();
+     data.forEach((c) => map.set(c.time, c));
+     dataMapRef.current = map;
+ 
+     series.setData(
+       data.map((c) => ({
+diff --git a/frontend/tests/components/Layout.test.tsx b/frontend/tests/components/Layout.test.tsx
+index 520c1e3..9003d9e 100644
+--- a/frontend/tests/components/Layout.test.tsx
++++ b/frontend/tests/components/Layout.test.tsx
+@@ -1,11 +1,11 @@
+-ด++import { describe, it, expect, vi } from "vitest";
++ด++import { describe, it, expect, vi, beforeEach } from "vitest";
+ import { render, screen } from "@testing-library/react";
+ import Layout from "../../src/components/Layout";
+ 
+ vi.mock("../../src/api/account", () => ({
+   getAccountInfo: vi.fn().mockResolvedValue({
+     balance: 10000,
+     equity: 9500,
+     margin: 500,
+     free_margin: 9000,
+     margin_level: 1900,
+@@ -23,20 +23,31 @@ vi.mock("../../src/api/symbols", () => ({
+     spread: 10,
+     margin_currency: "EUR",
+     contract_size: 100000,
+   }),
+ }));
+ 
+ vi.mock("../../src/api/rates", () => ({
+   getRates: vi.fn().mockResolvedValue([
+     { time: 1780272000, open: 1.1, high: 1.11, low: 1.09, close: 1.105, tick_volume: 100, spread: 10, real_volume: 100000 },
+   ]),
++  getRatesBeforeSymbol: vi.fn().mockResolvedValue([]),
+ }));
+ 
+ describe("Layout", () => {
++  beforeEach(() => {
++    vi.clearAllMocks();
++  });
++
+   it("renders all three panels", () => {
+     render(<Layout />);
+     expect(screen.getAllByText("EURUSD")).toHaveLength(2);
+     expect(screen.getByText("GBPUSD")).toBeInTheDocument();
+     expect(screen.getByText("BTCUSD")).toBeInTheDocument();
+   });
++
++  it("does not call getRatesBeforeSymbol on initial render", async () => {
++    const { getRatesBeforeSymbol } = await import("../../src/api/rates");
++    render(<Layout />);
++    expect(getRatesBeforeSymbol).not.toHaveBeenCalled();
++  });
+ });
+diff --git a/frontend/tests/components/PriceChart.test.tsx b/frontend/tests/components/PriceChart.test.tsx
+index 10c7de3..c43d4cd 100644
+--- a/frontend/tests/components/PriceChart.test.tsx
++++ b/frontend/tests/components/PriceChart.test.tsx
+@@ -1,11 +1,11 @@
+-ด++import { describe, it, expect } from "vitest";
++ด++import { describe, it, expect, vi } from "vitest";
+ import { render, screen } from "@testing-library/react";
+ import PriceChart from "../../src/components/PriceChart";
+ import type { Candle } from "../../src/types";
+ 
+ const mockCandles: Candle[] = [
+   { time: 1780272000, open: 1.1, high: 1.11, low: 1.09, close: 1.105, tick_volume: 100, spread: 10, real_volume: 100000 },
+ ];
+ 
+ describe("PriceChart", () => {
+   it("shows loading state", () => {
+@@ -17,11 +17,19 @@ describe("PriceChart", () => {
+     render(<PriceChart data={[]} symbol="EURUSD" digits={5} loading={false} error="Rates unavailable" />);
+     expect(screen.getByText(/Rates unavailable/i)).toBeInTheDocument();
+   });
+ 
+   it("renders chart container when data is provided", () => {
+     const { container } = render(
+       <PriceChart data={mockCandles} symbol="EURUSD" digits={5} loading={false} error={null} />,
+     );
+     expect(container.querySelector(".price-chart")).toBeInTheDocument();
+   });
++
++  it("accepts onVisibleRangeChange prop", () => {
++    const onRangeChange = vi.fn();
++    render(
++      <PriceChart data={mockCandles} symbol="EURUSD" digits={5} loading={false} error={null} onVisibleRangeChange={onRangeChange} />,
++    );
++    expect(onRangeChange).not.toHaveBeenCalled();
++  });
+ });
+diff --git a/src/api/routers/rates.py b/src/api/routers/rates.py
+index 479e08f..bf062c7 100644
+--- a/src/api/routers/rates.py
++++ b/src/api/routers/rates.py
+@@ -18,14 +18,17 @@ def _validate_timeframe(
+             detail=f"Invalid timeframe '{timeframe}'. Valid options: {', '.join(VALID_TIMEFRAMES)}",
+         )
+     return timeframe
+ 
+ 
+ @router.get("/api/v1/rates/{symbol}")
+ async def get_rates(
+     symbol: str = Path(..., min_length=1, max_length=20),
+     timeframe: str = Depends(_validate_timeframe),
+     count: int = Query(10, ge=1, le=1000, description="Number of candles (max 1000)"),
++    before: int | None = Query(None, description="Older candles; Unix timestamp (seconds)."),
+     adapter: MT5Adapter = Depends(get_adapter),
+ ):
+     service = RatesService(adapter)
++    if before is not None:
++        return service.get_rates_before(symbol, timeframe, count, before)
+     return service.get_rates(symbol, timeframe, count)
+diff --git a/src/api/services/rates_service.py b/src/api/services/rates_service.py
+index 2d468e7..3528db9 100644
+--- a/src/api/services/rates_service.py
++++ b/src/api/services/rates_service.py
+@@ -2,10 +2,14 @@ from api.timeframes import parse_timeframe
+ from mt5.protocol import MT5Adapter
+ 
+ 
+ class RatesService:
+     def __init__(self, adapter: MT5Adapter):
+         self._adapter = adapter
+ 
+     def get_rates(self, symbol: str, timeframe: str, count: int) -> list[dict]:
+         tf = parse_timeframe(timeframe)
+         return self._adapter.get_rates(symbol, tf, count)
++
++    def get_rates_before(self, symbol: str, timeframe: str, count: int, before: int) -> list[dict]:
++        tf = parse_timeframe(timeframe)
++        return self._adapter.get_rates_before(symbol, tf, count, before)
+diff --git a/src/mt5/fake.py b/src/mt5/fake.py
+index 6d2bf83..acf7061 100644
+--- a/src/mt5/fake.py
++++ b/src/mt5/fake.py
+@@ -156,20 +156,46 @@ class FakeMT5Adapter:
+                 "open": base,
+                 "high": base + 0.0005,
+                 "low": base - 0.0005,
+                 "close": base + 0.0002,
+                 "tick_volume": 100 + i * 10,
+                 "spread": 5 + (i % 15),
+                 "real_volume": (100 + i * 10) * 1000,
+             })
+         return rates
+ 
++    def get_rates_before(
++        self, symbol: str, timeframe: int, count: int, before: int
++    ) -> list[dict[str, object]]:
++        self._check_error("get_rates_before")
++        self._require_state(AdapterState.INITIALIZED, AdapterState.AUTHENTICATED)
++
++        if before <= 1_000_000_000:
++            return []
++
++        rates = []
++        current_time = before - 1
++        for i in range(count):
++            t = datetime.fromtimestamp(current_time) - timedelta(hours=timeframe * i)
++            base = 1.1000 - (i * 0.0001)
++            rates.append({
++                "time": int(t.timestamp()),
++                "open": base,
++                "high": base + 0.0005,
++                "low": base - 0.0005,
++                "close": base + 0.0002,
++                "tick_volume": 100 + i * 10,
++                "spread": 5 + (i % 15),
++                "real_volume": (100 + i * 10) * 1000,
++            })
++        return [r for r in rates if r["time"] < before]
++
+     def get_positions(self) -> list[PositionInfo]:
+         self._check_error("get_positions")
+         self._require_state(AdapterState.AUTHENTICATED)
+ 
+         return [
+             PositionInfo(
+                 ticket=pos.ticket,
+                 symbol=pos.symbol,
+                 volume=pos.volume,
+                 type_=pos.type_,
+diff --git a/src/mt5/live.py b/src/mt5/live.py
+index 3aa242b..2ad7601 100644
+--- a/src/mt5/live.py
++++ b/src/mt5/live.py
+@@ -159,20 +159,47 @@ class LiveMT5Adapter:
+                 "high": float(r[2]),
+                 "low": float(r[3]),
+                 "close": float(r[4]),
+                 "tick_volume": int(r[5]),
+                 "spread": int(r[6]),
+                 "real_volume": int(r[7]),
+             }
+             for r in rates
+         ]
+ 
++    def get_rates_before(
++        self, symbol: str, timeframe: int, count: int, before: int
++    ) -> list[dict[str, object]]:
++        mt5 = self._import_mt5()
++        if not self._connected:
++            raise AdapterNotConnectedError("Not connected")
++
++        mt5.symbol_select(symbol, True)
++        rates = mt5.copy_rates_from(symbol, timeframe, before, count)
++        if rates is None:
++            return []
++
++        return [
++            {
++                "time": int(r[0]),
++                "open": float(r[1]),
++                "high": float(r[2]),
++                "low": float(r[3]),
++                "close": float(r[4]),
++                "tick_volume": int(r[5]),
++                "spread": int(r[6]),
++                "real_volume": int(r[7]),
++            }
++            for r in rates
++            if int(r[0]) < before
++        ]
++
+     def get_positions(self) -> list[PositionInfo]:
+         mt5 = self._import_mt5()
+         if not self._authenticated:
+             raise AdapterNotConnectedError("Not authenticated")
+ 
+         positions = mt5.positions_get()
+         if positions is None:
+             return []
+ 
+         return [
+diff --git a/src/mt5/protocol.py b/src/mt5/protocol.py
+index 4b35d30..554039c 100644
+--- a/src/mt5/protocol.py
++++ b/src/mt5/protocol.py
+@@ -78,20 +78,25 @@ class MT5Adapter(Protocol):
+ 
+     def get_account_info(self) -> AccountInfo:
+         ...
+ 
+     def get_symbol_info(self, symbol: str) -> dict[str, object] | None:
+         ...
+ 
+     def get_rates(self, symbol: str, timeframe: int, count: int) -> list[dict[str, object]]:
+         ...
+ 
++    def get_rates_before(
++        self, symbol: str, timeframe: int, count: int, before: int
++    ) -> list[dict[str, object]]:
++        ...
++
+     def get_positions(self) -> list[PositionInfo]:
+         ...
+ 
+     def get_orders(self) -> list[dict[str, object]]:
+         ...
+ 
+     def send_order(
+         self, symbol: str, volume: float, type_: int,
+         price: float, sl: float = 0, tp: float = 0,
+     ) -> OrderResult:
+diff --git a/tests/api/test_rates.py b/tests/api/test_rates.py
+index 927d730..b032c87 100644
+--- a/tests/api/test_rates.py
++++ b/tests/api/test_rates.py
+@@ -28,10 +28,31 @@ def test_get_rates_exceeds_max_count(client, fake_adapter):
+ 
+ def test_get_rates_invalid_timeframe(client, fake_adapter):
+     response = client.get("/api/v1/rates/EURUSD?timeframe=INVALID")
+     assert response.status_code == 422
+ 
+ 
+ def test_get_rates_when_disconnected(client, fake_adapter):
+     fake_adapter.shutdown()
+     response = client.get("/api/v1/rates/EURUSD")
+     assert response.status_code == 503
++
++
++def test_get_rates_with_before(client, fake_adapter):
++    response = client.get("/api/v1/rates/EURUSD?count=5&before=1800000000")
++    assert response.status_code == 200
++    data = response.json()
++    assert len(data) == 5
++    for candle in data:
++        assert candle["time"] < 1800000000
++
++
++def test_get_rates_before_empty(client, fake_adapter):
++    response = client.get("/api/v1/rates/EURUSD?count=5&before=1000000000")
++    assert response.status_code == 200
++    data = response.json()
++    assert data == []
++
++
++def test_get_rates_invalid_before(client, fake_adapter):
++    response = client.get("/api/v1/rates/EURUSD?before=notanumber")
++    assert response.status_code == 422
+diff --git a/tests/test_fake.py b/tests/test_fake.py
+index a80f21a..7ccf473 100644
+--- a/tests/test_fake.py
++++ b/tests/test_fake.py
+@@ -104,20 +104,70 @@ class TestFakeMT5AdapterData:
+         r = rates[0]
+         assert "time" in r
+         assert "open" in r
+         assert "high" in r
+         assert "low" in r
+         assert "close" in r
+         assert "tick_volume" in r
+         assert "spread" in r
+         assert "real_volume" in r
+ 
++    def test_get_rates_before_returns_count(self):
++        adapter = FakeMT5Adapter()
++        adapter.initialize()
++        before = int(datetime.now().timestamp()) + 100000
++        rates = adapter.get_rates_before("EURUSD", 1, 10, before)
++        assert len(rates) == 10
++
++    def test_get_rates_before_all_before_timestamp(self):
++        adapter = FakeMT5Adapter()
++        adapter.initialize()
++        before = int(datetime.now().timestamp()) + 100000
++        rates = adapter.get_rates_before("EURUSD", 1, 10, before)
++        for r in rates:
++            assert r["time"] < before
++
++    def test_get_rates_before_filters_recent(self):
++        adapter = FakeMT5Adapter()
++        adapter.initialize()
++        before = int(datetime.now().timestamp()) - 1000
++        rates = adapter.get_rates_before("EURUSD", 1, 10, before)
++        for r in rates:
++            assert r["time"] < before
++
++    def test_get_rates_before_has_required_fields(self):
++        adapter = FakeMT5Adapter()
++        adapter.initialize()
++        before = int(datetime.now().timestamp()) + 100000
++        rates = adapter.get_rates_before("EURUSD", 1, 1, before)
++        r = rates[0]
++        assert "time" in r
++        assert "open" in r
++        assert "high" in r
++        assert "low" in r
++        assert "close" in r
++        assert "tick_volume" in r
++        assert "spread" in r
++        assert "real_volume" in r
++
++    def test_get_rates_before_requires_state(self):
++        adapter = FakeMT5Adapter()
++        with pytest.raises(AdapterNotConnectedError):
++            adapter.get_rates_before("EURUSD", 1, 1, 1000000)
++
++    def test_get_rates_before_error_mode(self):
++        adapter = FakeMT5Adapter()
++        adapter.initialize()
++        adapter.set_error_mode("get_rates_before", ConnectionError)
++        with pytest.raises(ConnectionError):
++            adapter.get_rates_before("EURUSD", 1, 1, 1000000)
++
+ 
+ class TestFakeMT5AdapterOrders:
+     def test_send_market_order_creates_position(self):
+         adapter = FakeMT5Adapter()
+         adapter.initialize(login=1, password="p", server="s")
+         result = adapter.send_order("EURUSD", 0.1, 0, 1.1000)
+         assert result.ticket > 0
+         assert result.filled_volume == 0.1
+         positions = adapter.get_positions()
+         assert len(positions) == 1
+diff --git a/tests/test_protocol.py b/tests/test_protocol.py
+index a32e827..f3839d7 100644
+--- a/tests/test_protocol.py
++++ b/tests/test_protocol.py
+@@ -6,20 +6,21 @@ class TestMT5AdapterProtocol:
+         assert hasattr(MT5Adapter, "__instancecheck__")
+ 
+     def test_protocol_methods_signatures(self):
+         expected_methods = [
+             "initialize",
+             "login",
+             "shutdown",
+             "get_account_info",
+             "get_symbol_info",
+             "get_rates",
++            "get_rates_before",
+             "get_positions",
+             "get_orders",
+             "send_order",
+             "modify_order",
+             "modify_position",
+             "cancel_order",
+             "get_history_deals",
+         ]
+         for name in expected_methods:
+             assert hasattr(MT5Adapter, name), f"Missing method: {name}"

@@ -1,0 +1,197 @@
+Commits: 1c221ae..e921554
+ frontend/src/components/Layout.tsx        | 54 ++++++++++++++++++++++++++++---
+ frontend/tests/components/Layout.test.tsx | 13 +++++++-
+ 2 files changed, 61 insertions(+), 6 deletions(-)
+diff --git a/frontend/src/components/Layout.tsx b/frontend/src/components/Layout.tsx
+index e7f93b1..9ff3ec2 100644
+--- a/frontend/src/components/Layout.tsx
++++ b/frontend/src/components/Layout.tsx
+@@ -1,35 +1,44 @@
+-ด++import { useState, useEffect, useCallback } from "react";
++ด++import { useState, useEffect, useCallback, useRef } from "react";
+ import Watchlist from "./Watchlist";
+ import PriceChart from "./PriceChart";
+ import AccountSummary from "./AccountSummary";
+ import TimeframeSelector from "./TimeframeSelector";
+ import { getAccountInfo } from "../api/account";
+ import { getSymbolInfo } from "../api/symbols";
+-import { getRates } from "../api/rates";
++import { getRates, getRatesBeforeSymbol } from "../api/rates";
+ import type { AccountInfo, Candle } from "../types";
+ import "./Layout.css";
+ 
+ const DEFAULT_SYMBOLS = ["EURUSD", "GBPUSD", "BTCUSD"];
+ const POLL_INTERVAL = 10_000;
+ 
+ export default function Layout() {
+   const [selectedSymbol, setSelectedSymbol] = useState("EURUSD");
+   const [timeframe, setTimeframe] = useState("PERIOD_H1");
+ 
+   const [account, setAccount] = useState<AccountInfo | null>(null);
+   const [accountLoading, setAccountLoading] = useState(true);
+   const [accountError, setAccountError] = useState<string | null>(null);
+ 
+-  const [candles, setCandles] = useState<Candle[]>([]);
++  const [allCandles, setAllCandles] = useState<Candle[]>([]);
+   const [candlesLoading, setCandlesLoading] = useState(true);
+   const [candlesError, setCandlesError] = useState<string | null>(null);
++  const [isLoadingMore, setIsLoadingMore] = useState(false);
++  const [hasMore, setHasMore] = useState(true);
++  const isLoadingMoreRef = useRef(false);
++  const hasMoreRef = useRef(true);
++  const allCandlesRef = useRef<Candle[]>([]);
++
++  isLoadingMoreRef.current = isLoadingMore;
++  hasMoreRef.current = hasMore;
++  allCandlesRef.current = allCandles;
+ 
+   const [digits, setDigits] = useState(5);
+ 
+   const fetchAccount = useCallback(async () => {
+     try {
+       setAccountLoading(true);
+       setAccountError(null);
+       const data = await getAccountInfo();
+       setAccount(data);
+     } catch (err) {
+@@ -48,28 +57,62 @@ export default function Layout() {
+     } catch {
+       setDigits(5);
+     }
+   }, [selectedSymbol]);
+ 
+   const fetchRates = useCallback(async () => {
+     try {
+       setCandlesLoading(true);
+       setCandlesError(null);
+       const data = await getRates(selectedSymbol, timeframe, 100);
+-      setCandles(data);
++      setAllCandles((prev) => {
++        const existingTimes = new Set(prev.map((c) => c.time));
++        const newCandles = data.filter((c) => !existingTimes.has(c.time));
++        return [...prev, ...newCandles].sort((a, b) => a.time - b.time);
++      });
+     } catch (err) {
+       setCandlesError(err instanceof Error ? err.message : "Failed to load rates");
+     } finally {
+       setCandlesLoading(false);
+     }
+   }, [selectedSymbol, timeframe]);
+ 
++  const handleVisibleRangeChange = useCallback(
++    async (from: number) => {
++      if (isLoadingMoreRef.current || !hasMoreRef.current || allCandlesRef.current.length === 0) return;
++      const totalBars = allCandlesRef.current.length;
++      const threshold = totalBars * 0.15;
++      if (from > threshold) return;
++
++      setIsLoadingMore(true);
++      const earliest = allCandlesRef.current[0].time;
++      try {
++        const olderCandles = await getRatesBeforeSymbol(
++          selectedSymbol,
++          timeframe,
++          500,
++          earliest,
++        );
++        if (olderCandles.length === 0) {
++          setHasMore(false);
++        } else {
++          setAllCandles((prev) => [...olderCandles, ...prev]);
++        }
++      } catch {
++        // silent ิว๖ TradingView-style
++      } finally {
++        setIsLoadingMore(false);
++      }
++    },
++    [selectedSymbol, timeframe],
++  );
++
+   useEffect(() => {
+     fetchAccount();
+     const interval = setInterval(fetchAccount, POLL_INTERVAL);
+     return () => clearInterval(interval);
+   }, [fetchAccount]);
+ 
+   useEffect(() => {
+     fetchRates();
+     fetchSymbolInfo();
+     const interval = setInterval(fetchRates, POLL_INTERVAL);
+@@ -78,25 +121,26 @@ export default function Layout() {
+ 
+   return (
+     <div className="dashboard-layout">
+       <Watchlist
+         symbols={DEFAULT_SYMBOLS}
+         selected={selectedSymbol}
+         onSelect={setSelectedSymbol}
+       />
+       <div>
+         <PriceChart
+-          data={candles}
++          data={allCandles}
+           symbol={selectedSymbol}
+           digits={digits}
+           loading={candlesLoading}
+           error={candlesError}
++          onVisibleRangeChange={handleVisibleRangeChange}
+         />
+         <TimeframeSelector value={timeframe} onChange={setTimeframe} />
+       </div>
+       <AccountSummary
+         account={account}
+         loading={accountLoading}
+         error={accountError}
+       />
+     </div>
+   );
+diff --git a/frontend/tests/components/Layout.test.tsx b/frontend/tests/components/Layout.test.tsx
+index 520c1e3..9003d9e 100644
+--- a/frontend/tests/components/Layout.test.tsx
++++ b/frontend/tests/components/Layout.test.tsx
+@@ -1,11 +1,11 @@
+-ด++import { describe, it, expect, vi } from "vitest";
++ด++import { describe, it, expect, vi, beforeEach } from "vitest";
+ import { render, screen } from "@testing-library/react";
+ import Layout from "../../src/components/Layout";
+ 
+ vi.mock("../../src/api/account", () => ({
+   getAccountInfo: vi.fn().mockResolvedValue({
+     balance: 10000,
+     equity: 9500,
+     margin: 500,
+     free_margin: 9000,
+     margin_level: 1900,
+@@ -23,20 +23,31 @@ vi.mock("../../src/api/symbols", () => ({
+     spread: 10,
+     margin_currency: "EUR",
+     contract_size: 100000,
+   }),
+ }));
+ 
+ vi.mock("../../src/api/rates", () => ({
+   getRates: vi.fn().mockResolvedValue([
+     { time: 1780272000, open: 1.1, high: 1.11, low: 1.09, close: 1.105, tick_volume: 100, spread: 10, real_volume: 100000 },
+   ]),
++  getRatesBeforeSymbol: vi.fn().mockResolvedValue([]),
+ }));
+ 
+ describe("Layout", () => {
++  beforeEach(() => {
++    vi.clearAllMocks();
++  });
++
+   it("renders all three panels", () => {
+     render(<Layout />);
+     expect(screen.getAllByText("EURUSD")).toHaveLength(2);
+     expect(screen.getByText("GBPUSD")).toBeInTheDocument();
+     expect(screen.getByText("BTCUSD")).toBeInTheDocument();
+   });
++
++  it("does not call getRatesBeforeSymbol on initial render", async () => {
++    const { getRatesBeforeSymbol } = await import("../../src/api/rates");
++    render(<Layout />);
++    expect(getRatesBeforeSymbol).not.toHaveBeenCalled();
++  });
+ });

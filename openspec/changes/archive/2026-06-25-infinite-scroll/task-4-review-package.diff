@@ -1,0 +1,126 @@
+Commits: c34764e..1c221ae
+ frontend/src/components/PriceChart.tsx        | 14 +++++++++++++-
+ frontend/tests/components/PriceChart.test.tsx | 10 +++++++++-
+ 2 files changed, 22 insertions(+), 2 deletions(-)
+diff --git a/frontend/src/components/PriceChart.tsx b/frontend/src/components/PriceChart.tsx
+index 1a0211b..1c30b33 100644
+--- a/frontend/src/components/PriceChart.tsx
++++ b/frontend/src/components/PriceChart.tsx
+@@ -4,28 +4,30 @@ import type { IChartApi, ISeriesApi, UTCTimestamp } from "lightweight-charts";
+ import type { Candle } from "../types";
+ import DataWindow from "./DataWindow";
+ import "./PriceChart.css";
+ 
+ interface Props {
+   data: Candle[];
+   symbol: string;
+   digits: number;
+   loading: boolean;
+   error: string | null;
++  onVisibleRangeChange?: (from: number, to: number) => void;
+ }
+ 
+-export default function PriceChart({ data, symbol, digits, loading, error }: Props) {
++export default function PriceChart({ data, symbol, digits, loading, error, onVisibleRangeChange }: Props) {
+   const chartContainerRef = useRef<HTMLDivElement>(null);
+   const chartRef = useRef<IChartApi | null>(null);
+   const seriesRef = useRef<ISeriesApi<"Candlestick"> | null>(null);
+   const symbolRef = useRef(symbol);
+   const dataMapRef = useRef<Map<number, Candle>>(new Map());
++  const visibleRangeCbRef = useRef(onVisibleRangeChange);
+   const [hoveredCandle, setHoveredCandle] = useState<Candle | null>(null);
+   const [tooltipPos, setTooltipPos] = useState<{ x: number; y: number } | null>(null);
+ 
+   useEffect(() => {
+     if (!chartContainerRef.current) return;
+ 
+     const chart = createChart(chartContainerRef.current, {
+       width: chartContainerRef.current.clientWidth,
+       height: 400,
+       layout: {
+@@ -61,38 +63,48 @@ export default function PriceChart({ data, symbol, digits, loading, error }: Pro
+         setTooltipPos(null);
+         return;
+       }
+       const candle = dataMapRef.current.get(param.time as number);
+       if (candle) {
+         setTooltipPos({ x: param.point.x, y: param.point.y });
+         setHoveredCandle(candle);
+       }
+     });
+ 
++    chart.timeScale().subscribeVisibleLogicalRangeChange((range) => {
++      if (range && visibleRangeCbRef.current) {
++        visibleRangeCbRef.current(range.from, range.to);
++      }
++    });
++
+     chartRef.current = chart;
+     seriesRef.current = series;
+ 
+     const handleResize = () => {
+       if (chartContainerRef.current && chartRef.current) {
+         chartRef.current.applyOptions({ width: chartContainerRef.current.clientWidth });
+       }
+     };
+     window.addEventListener("resize", handleResize);
+ 
+     return () => {
+       window.removeEventListener("resize", handleResize);
+       chart.remove();
+       chartRef.current = null;
+       seriesRef.current = null;
+     };
+   }, []);
+ 
++  useEffect(() => {
++    visibleRangeCbRef.current = onVisibleRangeChange;
++  }, [onVisibleRangeChange]);
++
+   useEffect(() => {
+     const series = seriesRef.current;
+     if (!series || data.length === 0) return;
+ 
+     const map = new Map<number, Candle>();
+     data.forEach((c) => map.set(c.time, c));
+     dataMapRef.current = map;
+ 
+     series.setData(
+       data.map((c) => ({
+diff --git a/frontend/tests/components/PriceChart.test.tsx b/frontend/tests/components/PriceChart.test.tsx
+index 10c7de3..c43d4cd 100644
+--- a/frontend/tests/components/PriceChart.test.tsx
++++ b/frontend/tests/components/PriceChart.test.tsx
+@@ -1,11 +1,11 @@
+-´++import { describe, it, expect } from "vitest";
++´++import { describe, it, expect, vi } from "vitest";
+ import { render, screen } from "@testing-library/react";
+ import PriceChart from "../../src/components/PriceChart";
+ import type { Candle } from "../../src/types";
+ 
+ const mockCandles: Candle[] = [
+   { time: 1780272000, open: 1.1, high: 1.11, low: 1.09, close: 1.105, tick_volume: 100, spread: 10, real_volume: 100000 },
+ ];
+ 
+ describe("PriceChart", () => {
+   it("shows loading state", () => {
+@@ -17,11 +17,19 @@ describe("PriceChart", () => {
+     render(<PriceChart data={[]} symbol="EURUSD" digits={5} loading={false} error="Rates unavailable" />);
+     expect(screen.getByText(/Rates unavailable/i)).toBeInTheDocument();
+   });
+ 
+   it("renders chart container when data is provided", () => {
+     const { container } = render(
+       <PriceChart data={mockCandles} symbol="EURUSD" digits={5} loading={false} error={null} />,
+     );
+     expect(container.querySelector(".price-chart")).toBeInTheDocument();
+   });
++
++  it("accepts onVisibleRangeChange prop", () => {
++    const onRangeChange = vi.fn();
++    render(
++      <PriceChart data={mockCandles} symbol="EURUSD" digits={5} loading={false} error={null} onVisibleRangeChange={onRangeChange} />,
++    );
++    expect(onRangeChange).not.toHaveBeenCalled();
++  });
+ });

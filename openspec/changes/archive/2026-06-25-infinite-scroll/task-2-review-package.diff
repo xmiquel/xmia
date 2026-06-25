@@ -1,0 +1,114 @@
+Commits: 9915dea..a6c7937
+
+
+ src/api/routers/rates.py          |  3 +++
+ src/api/services/rates_service.py |  4 ++++
+ src/mt5/fake.py                   |  3 +++
+ tests/api/test_rates.py           | 21 +++++++++++++++++++++
+ 4 files changed, 31 insertions(+)
+
+diff --git a/src/api/routers/rates.py b/src/api/routers/rates.py
+index 479e08f..40e3809 100644
+--- a/src/api/routers/rates.py
++++ b/src/api/routers/rates.py
+@@ -18,14 +18,17 @@ def _validate_timeframe(
+             detail=f"Invalid timeframe '{timeframe}'. Valid options: {', '.join(VALID_TIMEFRAMES)}",
+         )
+     return timeframe
+ 
+ 
+ @router.get("/api/v1/rates/{symbol}")
+ async def get_rates(
+     symbol: str = Path(..., min_length=1, max_length=20),
+     timeframe: str = Depends(_validate_timeframe),
+     count: int = Query(10, ge=1, le=1000, description="Number of candles (max 1000)"),
++    before: int | None = Query(None, description="Unix timestamp (seconds). If provided, returns candles older than this timestamp."),
+     adapter: MT5Adapter = Depends(get_adapter),
+ ):
+     service = RatesService(adapter)
++    if before is not None:
++        return service.get_rates_before(symbol, timeframe, count, before)
+     return service.get_rates(symbol, timeframe, count)
+diff --git a/src/api/services/rates_service.py b/src/api/services/rates_service.py
+index 2d468e7..3528db9 100644
+--- a/src/api/services/rates_service.py
++++ b/src/api/services/rates_service.py
+@@ -2,10 +2,14 @@ from api.timeframes import parse_timeframe
+ from mt5.protocol import MT5Adapter
+ 
+ 
+ class RatesService:
+     def __init__(self, adapter: MT5Adapter):
+         self._adapter = adapter
+ 
+     def get_rates(self, symbol: str, timeframe: str, count: int) -> list[dict]:
+         tf = parse_timeframe(timeframe)
+         return self._adapter.get_rates(symbol, tf, count)
++
++    def get_rates_before(self, symbol: str, timeframe: str, count: int, before: int) -> list[dict]:
++        tf = parse_timeframe(timeframe)
++        return self._adapter.get_rates_before(symbol, tf, count, before)
+diff --git a/src/mt5/fake.py b/src/mt5/fake.py
+index 0e9eff1..acf7061 100644
+--- a/src/mt5/fake.py
++++ b/src/mt5/fake.py
+@@ -162,20 +162,23 @@ class FakeMT5Adapter:
+                 "real_volume": (100 + i * 10) * 1000,
+             })
+         return rates
+ 
+     def get_rates_before(
+         self, symbol: str, timeframe: int, count: int, before: int
+     ) -> list[dict[str, object]]:
+         self._check_error("get_rates_before")
+         self._require_state(AdapterState.INITIALIZED, AdapterState.AUTHENTICATED)
+ 
++        if before <= 1_000_000_000:
++            return []
++
+         rates = []
+         current_time = before - 1
+         for i in range(count):
+             t = datetime.fromtimestamp(current_time) - timedelta(hours=timeframe * i)
+             base = 1.1000 - (i * 0.0001)
+             rates.append({
+                 "time": int(t.timestamp()),
+                 "open": base,
+                 "high": base + 0.0005,
+                 "low": base - 0.0005,
+diff --git a/tests/api/test_rates.py b/tests/api/test_rates.py
+index 927d730..b032c87 100644
+--- a/tests/api/test_rates.py
++++ b/tests/api/test_rates.py
+@@ -28,10 +28,31 @@ def test_get_rates_exceeds_max_count(client, fake_adapter):
+ 
+ def test_get_rates_invalid_timeframe(client, fake_adapter):
+     response = client.get("/api/v1/rates/EURUSD?timeframe=INVALID")
+     assert response.status_code == 422
+ 
+ 
+ def test_get_rates_when_disconnected(client, fake_adapter):
+     fake_adapter.shutdown()
+     response = client.get("/api/v1/rates/EURUSD")
+     assert response.status_code == 503
++
++
++def test_get_rates_with_before(client, fake_adapter):
++    response = client.get("/api/v1/rates/EURUSD?count=5&before=1800000000")
++    assert response.status_code == 200
++    data = response.json()
++    assert len(data) == 5
++    for candle in data:
++        assert candle["time"] < 1800000000
++
++
++def test_get_rates_before_empty(client, fake_adapter):
++    response = client.get("/api/v1/rates/EURUSD?count=5&before=1000000000")
++    assert response.status_code == 200
++    data = response.json()
++    assert data == []
++
++
++def test_get_rates_invalid_before(client, fake_adapter):
++    response = client.get("/api/v1/rates/EURUSD?before=notanumber")
++    assert response.status_code == 422

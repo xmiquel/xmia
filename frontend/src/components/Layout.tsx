@@ -30,6 +30,7 @@ export default function Layout() {
   const allCandlesRef = useRef<Candle[]>([]);
   const symbolRef = useRef(selectedSymbol);
   const timeframeRef = useRef(timeframe);
+  const pendingBeforeRef = useRef<number | null>(null);
 
   isLoadingMoreRef.current = isLoadingMore;
   hasMoreRef.current = hasMore;
@@ -85,6 +86,7 @@ export default function Layout() {
     setHasMore(true);
     setIsLoadingMore(false);
     setCandlesError(null);
+    pendingBeforeRef.current = null;
   }, [selectedSymbol, timeframe]);
 
   const handleVisibleRangeChange = useCallback(
@@ -94,9 +96,12 @@ export default function Layout() {
       const threshold = totalBars * 0.15;
       if (from > threshold) return;
 
+      const earliest = allCandlesRef.current[0].time;
+      if (earliest === pendingBeforeRef.current) return;
+
+      pendingBeforeRef.current = earliest;
       isLoadingMoreRef.current = true;
       setIsLoadingMore(true);
-      const earliest = allCandlesRef.current[0].time;
       try {
         const olderCandles = await getRatesBeforeSymbol(
           symbolRef.current,
@@ -108,15 +113,11 @@ export default function Layout() {
           setHasMore(false);
           hasMoreRef.current = false;
         } else {
-          setAllCandles((prev) => {
-            const merged = [...olderCandles, ...prev];
-            for (let i = 1; i < merged.length; i++) {
-              if (merged[i].time < merged[i - 1].time) {
-                return merged.sort((a, b) => a.time - b.time);
-              }
-            }
-            return merged;
-          });
+          const existingTimes = new Set(allCandlesRef.current.map((c) => c.time));
+          const uniqueOlder = olderCandles.filter((c) => !existingTimes.has(c.time));
+          if (uniqueOlder.length > 0) {
+            setAllCandles((prev) => [...uniqueOlder, ...prev].sort((a, b) => a.time - b.time));
+          }
         }
       } catch {
         // silent — TradingView-style

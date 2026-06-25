@@ -133,6 +133,7 @@ The system SHALL expose a `GET /api/v1/rates/{symbol}` endpoint that returns his
 |-----------|------|---------|-----|-------------|
 | `timeframe` | string | `PERIOD_H1` | — | MT5 timeframe constant (PERIOD_M1, PERIOD_M3, PERIOD_M5, PERIOD_M6, PERIOD_M12, PERIOD_M15, PERIOD_M24, PERIOD_M30, PERIOD_H1, PERIOD_H4, PERIOD_D1, PERIOD_W1, PERIOD_MN1) |
 | `count` | integer | 10 | 1000 | Number of candles to return |
+| `before` | integer (Unix seconds) | — | — | **New.** Return candles older than this timestamp |
 
 **Response schema:**
 
@@ -176,6 +177,32 @@ The system SHALL expose a `GET /api/v1/rates/{symbol}` endpoint that returns his
 - **GIVEN** the adapter is NOT connected
 - **WHEN** a GET request is made to `/api/v1/rates/EURUSD`
 - **THEN** the response SHALL return HTTP 503 Service Unavailable
+
+### Scenario: Get rates before a timestamp
+- **GIVEN** the adapter is connected
+- **WHEN** a `GET` request is made to `/api/v1/rates/EURUSD?count=5&before=1800000000`
+- **THEN** the response SHALL return `HTTP 200`
+- **AND** the body SHALL be an array of up to 5 candles
+- **AND** each candle SHALL have `time < 1800000000`
+
+### Scenario: `before` timestamp filters correctly
+- **WHEN** a request includes `before=1700000000`
+- **THEN** all returned candles SHALL have `time` values strictly less than 1700000000
+
+### Scenario: No more history available
+- **GIVEN** there are no candles before the given `before` timestamp
+- **WHEN** a request is made with `before`
+- **THEN** the response SHALL return `HTTP 200`
+- **AND** the body SHALL be an empty array `[]`
+
+### Scenario: Invalid `before` value
+- **WHEN** a request includes `before=invalid`
+- **THEN** the server SHALL return `HTTP 422 Unprocessable Entity`
+
+### Scenario: `before` with default count
+- **WHEN** a request is made to `/api/v1/rates/EURUSD?before=1800000000` (without explicit `count`)
+- **THEN** the response SHALL return 10 candles by default (existing default)
+- **AND** all candles SHALL have `time < 1800000000`
 
 ---
 
