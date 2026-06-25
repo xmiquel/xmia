@@ -22,7 +22,7 @@
 
 ## 2. Verify
 
-- [ ] 2.1 Push to a branch and open a draft PR to verify workflow runs
-- [ ] 2.2 Confirm all checks pass on the PR
+- [x] 2.1 Push to a branch and open a draft PR to verify workflow runs
+- [x] 2.2 Confirm all checks pass on the PR
 - [x] 2.3 Add CI status badge to README.md
 - [x] 2.4 Commit and finalize
