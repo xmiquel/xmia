@@ -130,6 +130,11 @@ class FakeMT5Adapter:
             leverage=100,
         )
 
+    def get_symbols(self) -> list[str]:
+        self._check_error("get_symbols")
+        self._require_state(AdapterState.INITIALIZED, AdapterState.AUTHENTICATED)
+        return ["EURUSD", "GBPUSD", "BTCUSD", "AUDUSD", "USDJPY"]
+
     def get_symbol_info(self, symbol: str) -> dict[str, object] | None:
         self._check_error("get_symbol_info")
         self._require_state(AdapterState.INITIALIZED, AdapterState.AUTHENTICATED)

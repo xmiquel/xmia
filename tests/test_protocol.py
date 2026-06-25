@@ -11,6 +11,7 @@ class TestMT5AdapterProtocol:
             "login",
             "shutdown",
             "get_account_info",
+            "get_symbols",
             "get_symbol_info",
             "get_rates",
             "get_rates_before",

@@ -79,6 +79,9 @@ class MT5Adapter(Protocol):
     def get_account_info(self) -> AccountInfo:
         ...
 
+    def get_symbols(self) -> list[str]:
+        ...
+
     def get_symbol_info(self, symbol: str) -> dict[str, object] | None:
         ...
 

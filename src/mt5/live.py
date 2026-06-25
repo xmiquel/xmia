@@ -126,6 +126,17 @@ class LiveMT5Adapter:
             leverage=info.leverage,
         )
 
+    def get_symbols(self) -> list[str]:
+        mt5 = self._import_mt5()
+        if not self._connected:
+            raise AdapterNotConnectedError("Not connected")
+
+        symbols = mt5.symbols_get()
+        if symbols is None:
+            return []
+
+        return [s.name for s in symbols if s.visible]
+
     def get_symbol_info(self, symbol: str) -> dict[str, object] | None:
         mt5 = self._import_mt5()
         if not self._connected:
