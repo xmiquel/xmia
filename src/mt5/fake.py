@@ -152,7 +152,7 @@ class FakeMT5Adapter:
         self._require_state(AdapterState.INITIALIZED, AdapterState.AUTHENTICATED)
 
         now = datetime.now()
-        rates = []
+        rates: list[dict[str, object]] = []
         for i in range(count):
             t = now - timedelta(hours=timeframe * i)
             base = 1.1000 + i * 0.0001
@@ -177,7 +177,7 @@ class FakeMT5Adapter:
         if before <= 1_000_000_000:
             return []
 
-        rates = []
+        rates: list[dict[str, object]] = []
         current_time = before - 1
         for i in range(count):
             t = datetime.fromtimestamp(current_time) - timedelta(hours=timeframe * i)

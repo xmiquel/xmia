@@ -1,4 +1,5 @@
-﻿from datetime import datetime
+﻿import logging
+from datetime import datetime
 from typing import TYPE_CHECKING, Any
 
 from mt5.errors import (
@@ -18,6 +19,7 @@ class LiveMT5Adapter:
         self._mt5 = None
         self._connected = False
         self._authenticated = False
+        self._logger = logging.getLogger(__name__)
 
     def _import_mt5(self) -> Any:
         if self._mt5 is not None:
