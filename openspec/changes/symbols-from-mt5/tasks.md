@@ -71,8 +71,8 @@
 **Files:**
 - No file changes — verification only
 
-- [ ] 5.1 Run full backend suite: `uv run pytest tests/ -v`
-- [ ] 5.2 Run full frontend suite: `cd frontend && npx vitest run`
-- [ ] 5.3 Frontend typecheck: `cd frontend && npx tsc --noEmit`
-- [ ] 5.4 Frontend lint: `cd frontend && npx eslint src/`
-- [ ] 5.5 Final commit
+- [x] 5.1 Run full backend suite: `uv run pytest tests/ -v`
+- [x] 5.2 Run full frontend suite: `cd frontend && npx vitest run`
+- [x] 5.3 Frontend typecheck: `cd frontend && npx tsc --noEmit`
+- [x] 5.4 Frontend lint: `cd frontend && npx eslint src/`
+- [x] 5.5 Final commit

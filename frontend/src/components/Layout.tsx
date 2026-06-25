@@ -143,6 +143,7 @@ export default function Layout() {
       .catch(() => {
         setSymbols(FALLBACK_SYMBOLS);
       });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
