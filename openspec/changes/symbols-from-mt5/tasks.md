@@ -44,9 +44,9 @@
 **Files:**
 - Modify: `frontend/src/api/symbols.ts`
 
-- [ ] 3.1 Add `getSymbols(): Promise<string[]>` calling `GET /api/v1/symbols`
-- [ ] 3.2 Run typecheck: `cd frontend && npx tsc --noEmit`
-- [ ] 3.3 Commit
+- [x] 3.1 Add `getSymbols(): Promise<string[]>` calling `GET /api/v1/symbols`
+- [x] 3.2 Run typecheck: `cd frontend && npx tsc --noEmit`
+- [x] 3.3 Commit
 
 ---
 
