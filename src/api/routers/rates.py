@@ -25,7 +25,7 @@ async def get_rates(
     symbol: str = Path(..., min_length=1, max_length=20),
     timeframe: str = Depends(_validate_timeframe),
     count: int = Query(10, ge=1, le=1000, description="Number of candles (max 1000)"),
-    before: int | None = Query(None, description="Unix timestamp (seconds). If provided, returns candles older than this timestamp."),
+    before: int | None = Query(None, description="Older candles; Unix timestamp (seconds)."),
     adapter: MT5Adapter = Depends(get_adapter),
 ):
     service = RatesService(adapter)
