@@ -85,6 +85,11 @@ class MT5Adapter(Protocol):
     def get_rates(self, symbol: str, timeframe: int, count: int) -> list[dict[str, object]]:
         ...
 
+    def get_rates_before(
+        self, symbol: str, timeframe: int, count: int, before: int
+    ) -> list[dict[str, object]]:
+        ...
+
     def get_positions(self) -> list[PositionInfo]:
         ...
 

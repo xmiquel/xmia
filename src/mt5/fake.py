@@ -163,6 +163,29 @@ class FakeMT5Adapter:
             })
         return rates
 
+    def get_rates_before(
+        self, symbol: str, timeframe: int, count: int, before: int
+    ) -> list[dict[str, object]]:
+        self._check_error("get_rates_before")
+        self._require_state(AdapterState.INITIALIZED, AdapterState.AUTHENTICATED)
+
+        rates = []
+        current_time = before - 1
+        for i in range(count):
+            t = datetime.fromtimestamp(current_time) - timedelta(hours=timeframe * i)
+            base = 1.1000 - (i * 0.0001)
+            rates.append({
+                "time": int(t.timestamp()),
+                "open": base,
+                "high": base + 0.0005,
+                "low": base - 0.0005,
+                "close": base + 0.0002,
+                "tick_volume": 100 + i * 10,
+                "spread": 5 + (i % 15),
+                "real_volume": (100 + i * 10) * 1000,
+            })
+        return [r for r in rates if r["time"] < before]
+
     def get_positions(self) -> list[PositionInfo]:
         self._check_error("get_positions")
         self._require_state(AdapterState.AUTHENTICATED)

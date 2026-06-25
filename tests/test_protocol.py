@@ -13,6 +13,7 @@ class TestMT5AdapterProtocol:
             "get_account_info",
             "get_symbol_info",
             "get_rates",
+            "get_rates_before",
             "get_positions",
             "get_orders",
             "send_order",

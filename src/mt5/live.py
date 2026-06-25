@@ -166,6 +166,33 @@ class LiveMT5Adapter:
             for r in rates
         ]
 
+    def get_rates_before(
+        self, symbol: str, timeframe: int, count: int, before: int
+    ) -> list[dict[str, object]]:
+        mt5 = self._import_mt5()
+        if not self._connected:
+            raise AdapterNotConnectedError("Not connected")
+
+        mt5.symbol_select(symbol, True)
+        rates = mt5.copy_rates_from(symbol, timeframe, before, count)
+        if rates is None:
+            return []
+
+        return [
+            {
+                "time": int(r[0]),
+                "open": float(r[1]),
+                "high": float(r[2]),
+                "low": float(r[3]),
+                "close": float(r[4]),
+                "tick_volume": int(r[5]),
+                "spread": int(r[6]),
+                "real_volume": int(r[7]),
+            }
+            for r in rates
+            if int(r[0]) < before
+        ]
+
     def get_positions(self) -> list[PositionInfo]:
         mt5 = self._import_mt5()
         if not self._authenticated:

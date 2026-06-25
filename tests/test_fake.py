@@ -111,6 +111,56 @@ class TestFakeMT5AdapterData:
         assert "spread" in r
         assert "real_volume" in r
 
+    def test_get_rates_before_returns_count(self):
+        adapter = FakeMT5Adapter()
+        adapter.initialize()
+        before = int(datetime.now().timestamp()) + 100000
+        rates = adapter.get_rates_before("EURUSD", 1, 10, before)
+        assert len(rates) == 10
+
+    def test_get_rates_before_all_before_timestamp(self):
+        adapter = FakeMT5Adapter()
+        adapter.initialize()
+        before = int(datetime.now().timestamp()) + 100000
+        rates = adapter.get_rates_before("EURUSD", 1, 10, before)
+        for r in rates:
+            assert r["time"] < before
+
+    def test_get_rates_before_filters_recent(self):
+        adapter = FakeMT5Adapter()
+        adapter.initialize()
+        before = int(datetime.now().timestamp()) - 1000
+        rates = adapter.get_rates_before("EURUSD", 1, 10, before)
+        for r in rates:
+            assert r["time"] < before
+
+    def test_get_rates_before_has_required_fields(self):
+        adapter = FakeMT5Adapter()
+        adapter.initialize()
+        before = int(datetime.now().timestamp()) + 100000
+        rates = adapter.get_rates_before("EURUSD", 1, 1, before)
+        r = rates[0]
+        assert "time" in r
+        assert "open" in r
+        assert "high" in r
+        assert "low" in r
+        assert "close" in r
+        assert "tick_volume" in r
+        assert "spread" in r
+        assert "real_volume" in r
+
+    def test_get_rates_before_requires_state(self):
+        adapter = FakeMT5Adapter()
+        with pytest.raises(AdapterNotConnectedError):
+            adapter.get_rates_before("EURUSD", 1, 1, 1000000)
+
+    def test_get_rates_before_error_mode(self):
+        adapter = FakeMT5Adapter()
+        adapter.initialize()
+        adapter.set_error_mode("get_rates_before", ConnectionError)
+        with pytest.raises(ConnectionError):
+            adapter.get_rates_before("EURUSD", 1, 1, 1000000)
+
 
 class TestFakeMT5AdapterOrders:
     def test_send_market_order_creates_position(self):
