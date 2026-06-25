@@ -192,7 +192,7 @@ class FakeMT5Adapter:
                 "spread": 5 + (i % 15),
                 "real_volume": (100 + i * 10) * 1000,
             })
-        return [r for r in rates if r["time"] < before]
+        return [r for r in rates if r["time"] < before]  # type: ignore[operator]
 
     def get_positions(self) -> list[PositionInfo]:
         self._check_error("get_positions")

@@ -53,7 +53,7 @@ plugins = ["pydantic.mypy"]
 ignore_missing_imports = true
 
 [[tool.mypy.overrides]]
-module = "src.api.*"
+module = ["src.api.*"]
 ignore_errors = true
 
 [tool.pytest.ini_options]
