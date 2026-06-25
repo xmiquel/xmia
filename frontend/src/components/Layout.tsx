@@ -28,10 +28,14 @@ export default function Layout() {
   const isLoadingMoreRef = useRef(false);
   const hasMoreRef = useRef(true);
   const allCandlesRef = useRef<Candle[]>([]);
+  const symbolRef = useRef(selectedSymbol);
+  const timeframeRef = useRef(timeframe);
 
   isLoadingMoreRef.current = isLoadingMore;
   hasMoreRef.current = hasMore;
   allCandlesRef.current = allCandles;
+  symbolRef.current = selectedSymbol;
+  timeframeRef.current = timeframe;
 
   const [digits, setDigits] = useState(5);
 
@@ -76,6 +80,13 @@ export default function Layout() {
     }
   }, [selectedSymbol, timeframe]);
 
+  useEffect(() => {
+    setAllCandles([]);
+    setHasMore(true);
+    setIsLoadingMore(false);
+    setCandlesError(null);
+  }, [selectedSymbol, timeframe]);
+
   const handleVisibleRangeChange = useCallback(
     async (from: number) => {
       if (isLoadingMoreRef.current || !hasMoreRef.current || allCandlesRef.current.length === 0) return;
@@ -87,8 +98,8 @@ export default function Layout() {
       const earliest = allCandlesRef.current[0].time;
       try {
         const olderCandles = await getRatesBeforeSymbol(
-          selectedSymbol,
-          timeframe,
+          symbolRef.current,
+          timeframeRef.current,
           500,
           earliest,
         );
@@ -103,7 +114,7 @@ export default function Layout() {
         setIsLoadingMore(false);
       }
     },
-    [selectedSymbol, timeframe],
+    [],
   );
 
   useEffect(() => {
