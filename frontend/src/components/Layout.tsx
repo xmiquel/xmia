@@ -94,6 +94,7 @@ export default function Layout() {
       const threshold = totalBars * 0.15;
       if (from > threshold) return;
 
+      isLoadingMoreRef.current = true;
       setIsLoadingMore(true);
       const earliest = allCandlesRef.current[0].time;
       try {
@@ -105,12 +106,22 @@ export default function Layout() {
         );
         if (olderCandles.length === 0) {
           setHasMore(false);
+          hasMoreRef.current = false;
         } else {
-          setAllCandles((prev) => [...olderCandles, ...prev]);
+          setAllCandles((prev) => {
+            const merged = [...olderCandles, ...prev];
+            for (let i = 1; i < merged.length; i++) {
+              if (merged[i].time < merged[i - 1].time) {
+                return merged.sort((a, b) => a.time - b.time);
+              }
+            }
+            return merged;
+          });
         }
       } catch {
         // silent — TradingView-style
       } finally {
+        isLoadingMoreRef.current = false;
         setIsLoadingMore(false);
       }
     },
