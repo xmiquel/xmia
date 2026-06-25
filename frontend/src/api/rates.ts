@@ -11,3 +11,19 @@ export function getRates(
     `/api/v1/rates/${encodeURIComponent(symbol)}?${params}`,
   ) as Promise<Candle[]>;
 }
+
+export function getRatesBeforeSymbol(
+  symbol: string,
+  timeframe: string,
+  count: number,
+  before: number,
+): Promise<Candle[]> {
+  const params = new URLSearchParams({
+    timeframe,
+    count: String(count),
+    before: String(before),
+  });
+  return fetchClient(
+    `/api/v1/rates/${encodeURIComponent(symbol)}?${params}`,
+  ) as Promise<Candle[]>;
+}
