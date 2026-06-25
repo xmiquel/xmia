@@ -169,6 +169,9 @@ class FakeMT5Adapter:
         self._check_error("get_rates_before")
         self._require_state(AdapterState.INITIALIZED, AdapterState.AUTHENTICATED)
 
+        if before <= 1_000_000_000:
+            return []
+
         rates = []
         current_time = before - 1
         for i in range(count):

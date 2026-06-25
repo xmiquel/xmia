@@ -35,3 +35,24 @@ def test_get_rates_when_disconnected(client, fake_adapter):
     fake_adapter.shutdown()
     response = client.get("/api/v1/rates/EURUSD")
     assert response.status_code == 503
+
+
+def test_get_rates_with_before(client, fake_adapter):
+    response = client.get("/api/v1/rates/EURUSD?count=5&before=1800000000")
+    assert response.status_code == 200
+    data = response.json()
+    assert len(data) == 5
+    for candle in data:
+        assert candle["time"] < 1800000000
+
+
+def test_get_rates_before_empty(client, fake_adapter):
+    response = client.get("/api/v1/rates/EURUSD?count=5&before=1000000000")
+    assert response.status_code == 200
+    data = response.json()
+    assert data == []
+
+
+def test_get_rates_invalid_before(client, fake_adapter):
+    response = client.get("/api/v1/rates/EURUSD?before=notanumber")
+    assert response.status_code == 422

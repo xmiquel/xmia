@@ -9,3 +9,7 @@ class RatesService:
     def get_rates(self, symbol: str, timeframe: str, count: int) -> list[dict]:
         tf = parse_timeframe(timeframe)
         return self._adapter.get_rates(symbol, tf, count)
+
+    def get_rates_before(self, symbol: str, timeframe: str, count: int, before: int) -> list[dict]:
+        tf = parse_timeframe(timeframe)
+        return self._adapter.get_rates_before(symbol, tf, count, before)
