@@ -70,9 +70,11 @@ export default function Layout() {
       setCandlesError(null);
       const data = await getRates(selectedSymbol, timeframe, 100);
       setAllCandles((prev) => {
-        const existingTimes = new Set(prev.map((c) => c.time));
-        const newCandles = data.filter((c) => !existingTimes.has(c.time));
-        return [...prev, ...newCandles].sort((a, b) => a.time - b.time);
+        const map = new Map(prev.map((c) => [c.time, c]));
+        for (const candle of data) {
+          map.set(candle.time, candle);
+        }
+        return Array.from(map.values()).sort((a, b) => a.time - b.time);
       });
     } catch (err) {
       setCandlesError(err instanceof Error ? err.message : "Failed to load rates");
