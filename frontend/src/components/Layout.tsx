@@ -4,12 +4,12 @@ import PriceChart from "./PriceChart";
 import AccountSummary from "./AccountSummary";
 import TimeframeSelector from "./TimeframeSelector";
 import { getAccountInfo } from "../api/account";
-import { getSymbolInfo } from "../api/symbols";
+import { getSymbols, getSymbolInfo } from "../api/symbols";
 import { getRates, getRatesBeforeSymbol } from "../api/rates";
 import type { AccountInfo, Candle } from "../types";
 import "./Layout.css";
 
-const DEFAULT_SYMBOLS = ["EURUSD", "GBPUSD", "BTCUSD"];
+const FALLBACK_SYMBOLS = ["EURUSD"];
 const POLL_INTERVAL = 10_000;
 
 export default function Layout() {
@@ -20,6 +20,7 @@ export default function Layout() {
   const [accountLoading, setAccountLoading] = useState(true);
   const [accountError, setAccountError] = useState<string | null>(null);
 
+  const [symbols, setSymbols] = useState<string[]>([]);
   const [allCandles, setAllCandles] = useState<Candle[]>([]);
   const [candlesLoading, setCandlesLoading] = useState(true);
   const [candlesError, setCandlesError] = useState<string | null>(null);
@@ -132,6 +133,19 @@ export default function Layout() {
   );
 
   useEffect(() => {
+    getSymbols()
+      .then((list) => {
+        setSymbols(list);
+        if (list.length > 0 && !list.includes(selectedSymbol)) {
+          setSelectedSymbol(list[0]);
+        }
+      })
+      .catch(() => {
+        setSymbols(FALLBACK_SYMBOLS);
+      });
+  }, []);
+
+  useEffect(() => {
     fetchAccount();
     const interval = setInterval(fetchAccount, POLL_INTERVAL);
     return () => clearInterval(interval);
@@ -147,7 +161,7 @@ export default function Layout() {
   return (
     <div className="dashboard-layout">
       <Watchlist
-        symbols={DEFAULT_SYMBOLS}
+        symbols={symbols}
         selected={selectedSymbol}
         onSelect={setSelectedSymbol}
       />

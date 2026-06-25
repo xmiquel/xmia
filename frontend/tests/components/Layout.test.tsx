@@ -1,5 +1,5 @@
 ﻿import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import Layout from "../../src/components/Layout";
 
 vi.mock("../../src/api/account", () => ({
@@ -17,6 +17,7 @@ vi.mock("../../src/api/account", () => ({
 }));
 
 vi.mock("../../src/api/symbols", () => ({
+  getSymbols: vi.fn().mockResolvedValue(["EURUSD", "GBPUSD", "BTCUSD"]),
   getSymbolInfo: vi.fn().mockResolvedValue({
     symbol: "EURUSD",
     digits: 5,
@@ -38,16 +39,24 @@ describe("Layout", () => {
     vi.clearAllMocks();
   });
 
-  it("renders all three panels", () => {
+  it("renders all three panels", async () => {
     render(<Layout />);
-    expect(screen.getAllByText("EURUSD")).toHaveLength(2);
-    expect(screen.getByText("GBPUSD")).toBeInTheDocument();
-    expect(screen.getByText("BTCUSD")).toBeInTheDocument();
+    expect(await screen.findByText("EURUSD")).toBeInTheDocument();
+    expect(await screen.findByText("GBPUSD")).toBeInTheDocument();
+    expect(await screen.findByText("BTCUSD")).toBeInTheDocument();
   });
 
   it("does not call getRatesBeforeSymbol on initial render", async () => {
     const { getRatesBeforeSymbol } = await import("../../src/api/rates");
     render(<Layout />);
     expect(getRatesBeforeSymbol).not.toHaveBeenCalled();
+  });
+
+  it("calls getSymbols on mount", async () => {
+    const { getSymbols } = await import("../../src/api/symbols");
+    render(<Layout />);
+    await waitFor(() => {
+      expect(getSymbols).toHaveBeenCalledTimes(1);
+    });
   });
 });

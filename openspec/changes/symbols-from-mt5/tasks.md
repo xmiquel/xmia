@@ -56,13 +56,13 @@
 - Modify: `frontend/src/components/Layout.tsx`
 - Modify: `frontend/tests/components/Layout.test.tsx`
 
-- [ ] 4.1 Replace `DEFAULT_SYMBOLS` with `symbols` state and `useEffect` to fetch on mount
-- [ ] 4.2 Pass `symbols` to `Watchlist` (component already accepts `symbols` prop)
-- [ ] 4.3 Keep `selectedSymbol` defaulting to first symbol from the list (or "EURUSD" as fallback)
-- [ ] 4.4 Update Layout tests: mock `getSymbols`, verify it's called on render
-- [ ] 4.5 Run frontend tests: `cd frontend && npx vitest run`
-- [ ] 4.6 Run typecheck: `cd frontend && npx tsc --noEmit`
-- [ ] 4.7 Commit
+- [x] 4.1 Replace `DEFAULT_SYMBOLS` with `symbols` state and `useEffect` to fetch on mount
+- [x] 4.2 Pass `symbols` to `Watchlist` (component already accepts `symbols` prop)
+- [x] 4.3 Keep `selectedSymbol` defaulting to first symbol from the list (or "EURUSD" as fallback)
+- [x] 4.4 Update Layout tests: mock `getSymbols`, verify it's called on render
+- [x] 4.5 Run frontend tests: `cd frontend && npx vitest run`
+- [x] 4.6 Run typecheck: `cd frontend && npx tsc --noEmit`
+- [x] 4.7 Commit
 
 ---
 
