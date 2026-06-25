@@ -1,5 +1,7 @@
 # mi-api
 
+![PR Checks](https://github.com/xmiquel/xmia/actions/workflows/pr.yml/badge.svg)
+
 Proyecto Python gestionado con `uv`.
 
 ## Requisitos
