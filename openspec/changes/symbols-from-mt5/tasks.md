@@ -31,11 +31,11 @@
 - Modify: `src/api/routers/symbols.py`
 - Modify: `tests/api/test_symbols.py`
 
-- [ ] 2.1 Add `get_symbols()` to `SymbolsService` in `symbols_service.py`
-- [ ] 2.2 Add `GET /api/v1/symbols` route in `symbols_router.py`
-- [ ] 2.3 Write API tests: happy path (returns list), not-connected returns 503
-- [ ] 2.4 Run tests: `uv run pytest tests/api/test_symbols.py -v`
-- [ ] 2.5 Commit
+- [x] 2.1 Add `get_symbols()` to `SymbolsService` in `symbols_service.py`
+- [x] 2.2 Add `GET /api/v1/symbols` route in `symbols_router.py`
+- [x] 2.3 Write API tests: happy path (returns list), not-connected returns 503
+- [x] 2.4 Run tests: `uv run pytest tests/api/test_symbols.py -v`
+- [x] 2.5 Commit
 
 ---
 

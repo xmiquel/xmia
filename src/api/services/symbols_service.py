@@ -8,6 +8,9 @@ class SymbolsService:
     def __init__(self, adapter: MT5Adapter):
         self._adapter = adapter
 
+    def get_symbols(self) -> list[str]:
+        return self._adapter.get_symbols()
+
     def get_symbol_info(self, symbol: str) -> dict:
         info = self._adapter.get_symbol_info(symbol)
         if info is None:

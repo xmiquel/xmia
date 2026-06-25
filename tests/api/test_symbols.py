@@ -1,3 +1,18 @@
+def test_list_symbols(client, fake_adapter):
+    response = client.get("/api/v1/symbols")
+    assert response.status_code == 200
+    data = response.json()
+    assert isinstance(data, list)
+    assert "EURUSD" in data
+    assert "GBPUSD" in data
+
+
+def test_list_symbols_when_disconnected(client, fake_adapter):
+    fake_adapter.shutdown()
+    response = client.get("/api/v1/symbols")
+    assert response.status_code == 503
+
+
 def test_get_symbol_info(client, fake_adapter):
     response = client.get("/api/v1/symbols/EURUSD")
     assert response.status_code == 200

@@ -7,6 +7,14 @@ from mt5.protocol import MT5Adapter
 router = APIRouter(tags=["Symbols"])
 
 
+@router.get("/api/v1/symbols")
+async def list_symbols(
+    adapter: MT5Adapter = Depends(get_adapter),
+):
+    service = SymbolsService(adapter)
+    return service.get_symbols()
+
+
 @router.get("/api/v1/symbols/{symbol}")
 async def get_symbol(
     symbol: str = Path(..., min_length=1, max_length=20),
