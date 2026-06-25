@@ -1,4 +1,4 @@
-﻿import { describe, it, expect } from "vitest";
+﻿import { describe, it, expect, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 import PriceChart from "../../src/components/PriceChart";
 import type { Candle } from "../../src/types";
@@ -23,5 +23,13 @@ describe("PriceChart", () => {
       <PriceChart data={mockCandles} symbol="EURUSD" digits={5} loading={false} error={null} />,
     );
     expect(container.querySelector(".price-chart")).toBeInTheDocument();
+  });
+
+  it("accepts onVisibleRangeChange prop", () => {
+    const onRangeChange = vi.fn();
+    render(
+      <PriceChart data={mockCandles} symbol="EURUSD" digits={5} loading={false} error={null} onVisibleRangeChange={onRangeChange} />,
+    );
+    expect(onRangeChange).not.toHaveBeenCalled();
   });
 });

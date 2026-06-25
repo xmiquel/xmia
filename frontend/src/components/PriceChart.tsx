@@ -11,14 +11,16 @@ interface Props {
   digits: number;
   loading: boolean;
   error: string | null;
+  onVisibleRangeChange?: (from: number, to: number) => void;
 }
 
-export default function PriceChart({ data, symbol, digits, loading, error }: Props) {
+export default function PriceChart({ data, symbol, digits, loading, error, onVisibleRangeChange }: Props) {
   const chartContainerRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<IChartApi | null>(null);
   const seriesRef = useRef<ISeriesApi<"Candlestick"> | null>(null);
   const symbolRef = useRef(symbol);
   const dataMapRef = useRef<Map<number, Candle>>(new Map());
+  const visibleRangeCbRef = useRef(onVisibleRangeChange);
   const [hoveredCandle, setHoveredCandle] = useState<Candle | null>(null);
   const [tooltipPos, setTooltipPos] = useState<{ x: number; y: number } | null>(null);
 
@@ -68,6 +70,12 @@ export default function PriceChart({ data, symbol, digits, loading, error }: Pro
       }
     });
 
+    chart.timeScale().subscribeVisibleLogicalRangeChange((range) => {
+      if (range && visibleRangeCbRef.current) {
+        visibleRangeCbRef.current(range.from, range.to);
+      }
+    });
+
     chartRef.current = chart;
     seriesRef.current = series;
 
@@ -85,6 +93,10 @@ export default function PriceChart({ data, symbol, digits, loading, error }: Pro
       seriesRef.current = null;
     };
   }, []);
+
+  useEffect(() => {
+    visibleRangeCbRef.current = onVisibleRangeChange;
+  }, [onVisibleRangeChange]);
 
   useEffect(() => {
     const series = seriesRef.current;
