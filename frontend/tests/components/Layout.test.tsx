@@ -1,4 +1,4 @@
-﻿import { describe, it, expect, vi } from "vitest";
+﻿import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen } from "@testing-library/react";
 import Layout from "../../src/components/Layout";
 
@@ -30,13 +30,24 @@ vi.mock("../../src/api/rates", () => ({
   getRates: vi.fn().mockResolvedValue([
     { time: 1780272000, open: 1.1, high: 1.11, low: 1.09, close: 1.105, tick_volume: 100, spread: 10, real_volume: 100000 },
   ]),
+  getRatesBeforeSymbol: vi.fn().mockResolvedValue([]),
 }));
 
 describe("Layout", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
   it("renders all three panels", () => {
     render(<Layout />);
     expect(screen.getAllByText("EURUSD")).toHaveLength(2);
     expect(screen.getByText("GBPUSD")).toBeInTheDocument();
     expect(screen.getByText("BTCUSD")).toBeInTheDocument();
+  });
+
+  it("does not call getRatesBeforeSymbol on initial render", async () => {
+    const { getRatesBeforeSymbol } = await import("../../src/api/rates");
+    render(<Layout />);
+    expect(getRatesBeforeSymbol).not.toHaveBeenCalled();
   });
 });

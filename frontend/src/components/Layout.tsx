@@ -1,11 +1,11 @@
-﻿import { useState, useEffect, useCallback } from "react";
+﻿import { useState, useEffect, useCallback, useRef } from "react";
 import Watchlist from "./Watchlist";
 import PriceChart from "./PriceChart";
 import AccountSummary from "./AccountSummary";
 import TimeframeSelector from "./TimeframeSelector";
 import { getAccountInfo } from "../api/account";
 import { getSymbolInfo } from "../api/symbols";
-import { getRates } from "../api/rates";
+import { getRates, getRatesBeforeSymbol } from "../api/rates";
 import type { AccountInfo, Candle } from "../types";
 import "./Layout.css";
 
@@ -20,9 +20,18 @@ export default function Layout() {
   const [accountLoading, setAccountLoading] = useState(true);
   const [accountError, setAccountError] = useState<string | null>(null);
 
-  const [candles, setCandles] = useState<Candle[]>([]);
+  const [allCandles, setAllCandles] = useState<Candle[]>([]);
   const [candlesLoading, setCandlesLoading] = useState(true);
   const [candlesError, setCandlesError] = useState<string | null>(null);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const [hasMore, setHasMore] = useState(true);
+  const isLoadingMoreRef = useRef(false);
+  const hasMoreRef = useRef(true);
+  const allCandlesRef = useRef<Candle[]>([]);
+
+  isLoadingMoreRef.current = isLoadingMore;
+  hasMoreRef.current = hasMore;
+  allCandlesRef.current = allCandles;
 
   const [digits, setDigits] = useState(5);
 
@@ -55,13 +64,47 @@ export default function Layout() {
       setCandlesLoading(true);
       setCandlesError(null);
       const data = await getRates(selectedSymbol, timeframe, 100);
-      setCandles(data);
+      setAllCandles((prev) => {
+        const existingTimes = new Set(prev.map((c) => c.time));
+        const newCandles = data.filter((c) => !existingTimes.has(c.time));
+        return [...prev, ...newCandles].sort((a, b) => a.time - b.time);
+      });
     } catch (err) {
       setCandlesError(err instanceof Error ? err.message : "Failed to load rates");
     } finally {
       setCandlesLoading(false);
     }
   }, [selectedSymbol, timeframe]);
+
+  const handleVisibleRangeChange = useCallback(
+    async (from: number) => {
+      if (isLoadingMoreRef.current || !hasMoreRef.current || allCandlesRef.current.length === 0) return;
+      const totalBars = allCandlesRef.current.length;
+      const threshold = totalBars * 0.15;
+      if (from > threshold) return;
+
+      setIsLoadingMore(true);
+      const earliest = allCandlesRef.current[0].time;
+      try {
+        const olderCandles = await getRatesBeforeSymbol(
+          selectedSymbol,
+          timeframe,
+          500,
+          earliest,
+        );
+        if (olderCandles.length === 0) {
+          setHasMore(false);
+        } else {
+          setAllCandles((prev) => [...olderCandles, ...prev]);
+        }
+      } catch {
+        // silent — TradingView-style
+      } finally {
+        setIsLoadingMore(false);
+      }
+    },
+    [selectedSymbol, timeframe],
+  );
 
   useEffect(() => {
     fetchAccount();
@@ -85,11 +128,12 @@ export default function Layout() {
       />
       <div>
         <PriceChart
-          data={candles}
+          data={allCandles}
           symbol={selectedSymbol}
           digits={digits}
           loading={candlesLoading}
           error={candlesError}
+          onVisibleRangeChange={handleVisibleRangeChange}
         />
         <TimeframeSelector value={timeframe} onChange={setTimeframe} />
       </div>
